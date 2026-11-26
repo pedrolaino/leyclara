@@ -90,10 +90,8 @@ export async function handleAsk(input: AskInput, headers: Headers): Promise<AskR
   // Repeated questions, like the examples, don't use quota.
   const key = cacheKey(question, context, chat);
   const hit = await kv.get(key).catch(() => null);
-  if (hit) {
-    const cached = JSON.parse(hit) as AskResult;
-    return { status: 200, body: { ...cached, meta: { ...cached.meta, cached: true } } };
-  }
+  const cached = hit ? (JSON.parse(hit) as AskResult) : null;
+  if (cached?.kind === "answer") return { status: 200, body: { ...cached, meta: { ...cached.meta, cached: true } } };
 
   if (!(await limiter.consumeIp(hashIp(ip, env.ipSalt)))) return { status: 429, body: { kind: "limit", message: MESSAGES.ipLimit } };
   if (await limiter.isExhausted()) return { status: 429, body: { kind: "limit", message: MESSAGES.exhausted } };
@@ -129,7 +127,8 @@ export async function handleAsk(input: AskInput, headers: Headers): Promise<AskR
     return err(502, MESSAGES.error);
   }
 
-  await kv.set(key, JSON.stringify(result), CACHE_TTL).catch(() => undefined);
+  // Only answers: a decline may come from a search that was down at the time.
+  if (result.kind === "answer") await kv.set(key, JSON.stringify(result), CACHE_TTL).catch(() => undefined);
   return { status: 200, body: result };
 }
 

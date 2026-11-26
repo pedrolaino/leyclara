@@ -50,6 +50,17 @@ test("off topic questions are declined", async ({ page }) => {
   await expect(page.getByRole("article", { name: "Respuesta" })).toHaveCount(0);
 });
 
+test("suggestion buttons are readable in dark mode", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.goto("/");
+  await ask(page, "¿Quién ganó el último mundial de fútbol?");
+  const chip = page.locator(".chip").first();
+  await expect(chip).toBeVisible();
+  const [bg, text] = await chip.evaluate((el) => [getComputedStyle(el).backgroundColor, getComputedStyle(el).color]);
+  expect(bg).not.toBe("rgb(255, 255, 255)");
+  expect(bg).not.toBe(text);
+});
+
 test("uncovered legal topics say where they are regulated", async ({ page }) => {
   await page.goto("/");
   await ask(page, "¿Cuánto me pueden aumentar el alquiler?");

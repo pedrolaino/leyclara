@@ -67,6 +67,7 @@
     --color-on-primary: #161615;
     --color-link: #8db4ff;
     --color-focus: #8db4ff;
+    --color-chip-bg: var(--color-surface);
     --color-hover-bg: #2e2a17;
     --color-notice: #e8c060;
     --color-notice-bg: #2a2412;
