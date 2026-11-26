@@ -35,6 +35,7 @@ const retrievalMode = vectorSearch ? "hybrid" : "lexical";
 
 type Row = Question & { got: AskResult; rank?: number; routeOk: boolean; citationOk?: boolean; ms: number };
 const rows: Row[] = [];
+const failed: string[] = [];
 
 for (const q of questions) {
   const t0 = Date.now();
@@ -48,6 +49,7 @@ for (const q of questions) {
     });
   } catch (err) {
     console.error(`✗ ${q.id}: ${(err as Error).message}`);
+    failed.push(q.id);
     process.exitCode = 1;
     continue;
   }
@@ -94,6 +96,7 @@ const summary = [
   `- Model: \`${chat.name}/${chat.model}\``,
   `- Search: ${retrievalMode}${vectorSearch && embedder ? ` (embeddings ${modelKey(embedder)})` : ""}`,
   `- Questions: ${rows.length} (${answerable.length} with an expected article)${usesModel ? "" : `; ${rows.length - routed.length} need a model and are left out of routing`}`,
+  ...(failed.length ? [`- Failed with a provider error and left out: ${failed.length} (${failed.join(", ")})`] : []),
   "",
   "## Search: is the expected article found?",
   "",
