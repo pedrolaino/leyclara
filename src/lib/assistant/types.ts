@@ -1,7 +1,7 @@
 import type { AreaId } from "@/config/laws";
 import type { AmendmentNote } from "@/lib/types";
 
-/** Artículo citado tal como lo ve el usuario: el texto es el oficial, nunca generado. */
+// The text is always the official one, never generated.
 export interface CitedArticle {
   id: string;
   lawId: string;
@@ -15,7 +15,6 @@ export interface CitedArticle {
   url: string;
 }
 
-/** "Texto vigente al ..." de cada ley usada en la respuesta. */
 export interface SourceInfo {
   lawId: string;
   lawName: string;
@@ -26,7 +25,7 @@ export interface SourceInfo {
 }
 
 interface Base {
-  /** Datos de diagnóstico (para evaluación y para mostrar "cómo se respondió"). */
+  // Debug info, used by the eval
   meta: {
     retrieval: "lexical" | "hybrid" | "skipped";
     candidates: { id: string; score: number; coverage: number; cosine?: number }[];
@@ -58,5 +57,4 @@ export type AskResult =
     })
   | (Base & { kind: "not_found"; message: string; area?: AreaId; referral?: string; suggestions: string[] });
 
-/** Respuestas de la API que no salen del pipeline (validación, cupo, captcha). */
 export type ApiError = { kind: "error" | "limit"; message: string };

@@ -1,9 +1,6 @@
-/**
- * Contratos de la capa de IA. El resto de la app depende solo de estas interfaces:
- * cambiar de proveedor es cambiar variables de entorno (ver src/lib/ai/index.ts).
- */
+// The rest of the app only uses these interfaces. The provider is picked in index.ts.
 
-/** Subconjunto de JSON Schema que entienden todos los proveedores. */
+// The JSON Schema subset every provider understands
 export type Schema =
   | { type: "string"; enum?: string[]; description?: string }
   | { type: "array"; items: Schema; description?: string }
@@ -15,7 +12,7 @@ export interface JsonRequest {
   schema: Schema;
   maxOutputTokens: number;
   temperature?: number;
-  /** Solo lo usa el proveedor "mock": la respuesta que tiene que devolver. */
+  // Only used by the mock provider
   mockResponse?: () => unknown;
 }
 
@@ -34,9 +31,9 @@ export interface EmbeddingProvider {
   embed(texts: string[], kind: EmbeddingKind): Promise<number[][]>;
 }
 
-/** El proveedor rechazó por cupo (HTTP 429 / RESOURCE_EXHAUSTED): se muestra "demo agotada". */
+// HTTP 429 from the provider. The UI shows "demo agotada".
 export class QuotaExceededError extends Error {
-  constructor(message = "Cupo del proveedor agotado") {
+  constructor(message = "Provider quota exceeded") {
     super(message);
     this.name = "QuotaExceededError";
   }
@@ -64,7 +61,7 @@ export async function postJson(url: string, headers: Record<string, string>, bod
   return res.json() as Promise<any>;
 }
 
-/** Algunos modelos envuelven el JSON en ```json ... ```: lo toleramos. */
+// Some models wrap the JSON in ```json fences.
 export function parseJsonLoose(text: string): unknown {
   const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
   try {
@@ -73,6 +70,6 @@ export function parseJsonLoose(text: string): unknown {
     const start = cleaned.indexOf("{");
     const end = cleaned.lastIndexOf("}");
     if (start >= 0 && end > start) return JSON.parse(cleaned.slice(start, end + 1));
-    throw new ProviderError("La respuesta del modelo no es JSON válido");
+    throw new ProviderError("Model response is not valid JSON");
   }
 }

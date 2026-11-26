@@ -18,14 +18,14 @@ function setup(chat: ChatProvider = new MockChat(), limits: { perIp?: number; gl
 describe("handleAsk", () => {
   beforeEach(() => setup());
 
-  it("valida largo mínimo y máximo", async () => {
+  it("checks min and max length", async () => {
     expect((await handleAsk({ question: "" }, headers())).status).toBe(400);
     expect((await handleAsk({ question: "hola" }, headers())).body).toMatchObject({ message: MESSAGES.tooShort });
     const long = "a".repeat(301);
     expect((await handleAsk({ question: long }, headers())).body).toMatchObject({ message: MESSAGES.tooLong(300) });
   });
 
-  it("responde y guarda en caché: la repetición no gasta cupo", async () => {
+  it("caches answers so repeats do not use quota", async () => {
     const q = { question: "¿Cuál es la velocidad máxima en una autopista?" };
     const first = await handleAsk(q, headers());
     expect(first.body.kind).toBe("answer");
@@ -36,16 +36,15 @@ describe("handleAsk", () => {
     }
   });
 
-  it("límite diario por IP", async () => {
+  it("daily limit per IP", async () => {
     const qs = ["¿Qué documentos tengo que llevar para manejar?", "¿Puedo manejar si tomé una cerveza?", "¿Cuánto dura el período de prueba?", "¿Cuándo me tienen que pagar el aguinaldo?"];
     const statuses = [];
     for (const question of qs) statuses.push((await handleAsk({ question }, headers("9.9.9.9"))).status);
     expect(statuses).toEqual([200, 200, 200, 429]);
-    // Otra IP sigue pudiendo preguntar.
     expect((await handleAsk({ question: qs[3] }, headers("8.8.8.8"))).status).toBe(200);
   });
 
-  it("si el proveedor agota el cupo, muestra 'demo agotada' y no vuelve a llamarlo", async () => {
+  it("shows the quota message on a provider 429 and stops calling it", async () => {
     let calls = 0;
     const chat: ChatProvider = {
       name: "fake",
@@ -63,7 +62,7 @@ describe("handleAsk", () => {
     expect(calls).toBe(1);
   });
 
-  it("cupo global de llamadas al modelo", async () => {
+  it("global daily cap on model calls", async () => {
     const chat: ChatProvider = {
       name: "fake",
       model: "x",
@@ -77,7 +76,7 @@ describe("handleAsk", () => {
     expect(r.body).toMatchObject({ kind: "limit" });
   });
 
-  it("las preguntas que se rechazan sin modelo no consumen cupo global", async () => {
+  it("rejections without a model call do not use the global quota", async () => {
     setup(new MockChat(), { perIp: 50, global: 0 });
     const r = await handleAsk({ question: "¿Quién ganó el mundial de fútbol?" }, headers());
     expect(r.body.kind).toBe("off_topic");

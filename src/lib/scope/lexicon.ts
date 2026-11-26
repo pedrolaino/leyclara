@@ -1,22 +1,15 @@
-/**
- * Conocimiento "de producto" que la búsqueda léxica no tiene:
- *  1. Cómo habla la gente vs. cómo habla la ley ("me echaron" → "despido").
- *  2. Qué palabras indican que la pregunta es de alguna de las tres áreas.
- *  3. Qué temas legales NO cubrimos, dónde se regulan y a quién consultar.
- *
- * Todos los patrones se aplican sobre texto normalizado (minúsculas, sin tildes).
- */
+// Everyday words vs. legal words ("me echaron" -> "despido"), area hints and uncovered topics.
+// Patterns run on normalized text: lowercase, no accents.
 import type { AreaId } from "@/config/laws";
 
 export interface Expansion {
   area: AreaId;
   pattern: RegExp;
-  /** Términos de la ley que se agregan a la búsqueda. */
   terms: string;
 }
 
 export const EXPANSIONS: Expansion[] = [
-  // --- Trabajo
+  // trabajo
   { area: "trabajo", pattern: /\b(echaron|echan|echar|echo|rajaron|rajar|raje|desp(id|ed|ide)\w*)\b/, terms: "despido sin justa causa indemnizacion preaviso" },
   { area: "trabajo", pattern: /\b(en negro|no registrad[oa]|sin registrar|sin recibo|informal)\b/, terms: "registracion relacion laboral no registrada" },
   { area: "trabajo", pattern: /\b(avisar|aviso|avisarme|anticipacion)\b/, terms: "preaviso plazos" },
@@ -42,7 +35,7 @@ export const EXPANSIONS: Expansion[] = [
   { area: "trabajo", pattern: /\b(menor de edad|tengo 16|tengo 17|adolescente)\b/, terms: "trabajo adolescente" },
   { area: "trabajo", pattern: /\b(suspendieron|suspension|me suspendieron)\b/, terms: "suspension" },
 
-  // --- Consumo
+  // consumo
   { area: "consumo", pattern: /\b(fallad[oa]s?|rot[oa]s?|romp\w*|rompi\w*|no anda|dejo de andar|no funciona|dejo de funcionar|defectuos[oa]s?|vino mal|con fallas?)\b/, terms: "defecto vicio garantia reparacion" },
   { area: "consumo", pattern: /\b(devolver|devolucion|arrepenti|arrepentirme|arrepentimiento|me arrepiento)\b/, terms: "revocacion aceptacion devolucion" },
   { area: "consumo", pattern: /\b(por internet|online|en linea|pagina web|app|por telefono|mercado libre|tienda virtual)\b/, terms: "venta por correspondencia medios electronicos a distancia" },
@@ -62,7 +55,7 @@ export const EXPANSIONS: Expansion[] = [
   { area: "consumo", pattern: /\b(luz|gas|agua|internet|telefonia|celular|cable)\b.*\b(corte|cortaron|factura|boleta|cobro)\b|\b(corte|cortaron)\b.*\b(luz|gas|agua|internet)\b/, terms: "servicios publicos domiciliarios interrupcion facturacion" },
   { area: "consumo", pattern: /\b(precio|cartel|gondola)\b/, terms: "precio oferta informacion" },
 
-  // --- Tránsito
+  // transito
   { area: "transito", pattern: /\b(auto|coche|camioneta|moto|motocicleta|vehiculo|camion)\b/, terms: "automotor vehiculo" },
   { area: "transito", pattern: /\b(registro de conducir|carnet|carne|licencia de conducir|registro)\b/, terms: "licencia de conducir" },
   { area: "transito", pattern: /\b(multa|multaron|infraccion|fotomulta|acta)\b/, terms: "multa sancion falta" },
@@ -86,7 +79,6 @@ export const EXPANSIONS: Expansion[] = [
   { area: "transito", pattern: /\b(ruta|autopista|autovia)\b/, terms: "autopistas rutas zona rural" },
 ];
 
-/** Palabras que por sí solas ya indican un área (sin expansión). */
 export const AREA_HINTS: Record<AreaId, RegExp> = {
   trabajo: /\b(trabaj\w*|emplead\w*|empleador\w*|laboral\w*|despid\w*|indemnizacion|licencias?|vacaciones|aguinaldo|sueldo|salario|preaviso|convenio|sindicato|antiguedad|remuneracion|jornada|horas extras?)\b/,
   consumo: /\b(compr\w*|vend\w*|producto|consumidor|tienda|negocio|local|garantia|proveedor|servicio|factura|reclamo|devol\w*|precio)\b/,
@@ -99,17 +91,11 @@ export interface UncoveredTopic {
   pattern: RegExp;
   whereRegulated: string;
   whereToAsk: string;
-  /**
-   * La ley aplicable es otra aunque la pregunta "suene" a un área cubierta
-   * (p. ej. vacaciones de una empleada doméstica: la LCT la excluye). Se rechaza siempre.
-   */
+  // Always rejected, even if the question sounds like a covered area.
+  // E.g. domestic workers: the LCT excludes them in art. 2.
   exclusive?: boolean;
 }
 
-/**
- * Temas legales que NO cubrimos. Solo damos una orientación general,
- * sin responder el fondo de la pregunta.
- */
 export const UNCOVERED_TOPICS: UncoveredTopic[] = [
   {
     id: "alquileres",

@@ -1,13 +1,7 @@
-/**
- * Calcula los embeddings de todos los chunks UNA sola vez y los guarda en data/index/embeddings.json.
- * En cada consulta solo se embebe la pregunta (1 llamada barata).
- *
- *   GEMINI_API_KEY=... npm run index:build
- *
- * Sin proveedor de embeddings configurado, la app funciona igual con búsqueda léxica (BM25).
- * Si se vuelve a parsear una ley, el hash del corpus cambia y la app ignora el índice viejo
- * hasta que se reconstruya.
- */
+// Embeds every chunk once and saves data/index/embeddings.json.
+// At query time only the question gets embedded.
+//
+//   GEMINI_API_KEY=... npm run index:build
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { createEmbeddingProvider } from "../src/lib/ai";
@@ -17,12 +11,12 @@ import { embeddingIndexPath, encodeVector, type EmbeddingIndexFile, getCorpus } 
 const env = getEnv();
 const provider = createEmbeddingProvider(env);
 if (!provider) {
-  console.log("EMBEDDING_PROVIDER=none (o falta GEMINI_API_KEY): no hay embeddings que calcular. La app usará búsqueda léxica.");
+  console.log("No embedding provider configured, nothing to do. The app will use lexical search.");
   process.exit(0);
 }
 
 const corpus = getCorpus();
-console.log(`Embebiendo ${corpus.chunks.length} chunks con ${provider.name}/${provider.model} (${provider.dimensions} dims)…`);
+console.log(`Embedding ${corpus.chunks.length} chunks with ${provider.name}/${provider.model} (${provider.dimensions} dims)...`);
 const t0 = Date.now();
 const vectors = await provider.embed(corpus.chunks.map((c) => c.text), "document");
 
@@ -37,4 +31,4 @@ const file: EmbeddingIndexFile = {
 const out = embeddingIndexPath();
 mkdirSync(path.dirname(out), { recursive: true });
 writeFileSync(out, JSON.stringify(file));
-console.log(`✓ ${out} (${vectors.length} vectores, ${((Date.now() - t0) / 1000).toFixed(1)} s)`);
+console.log(`✓ ${out} (${vectors.length} vectors, ${((Date.now() - t0) / 1000).toFixed(1)} s)`);

@@ -1,8 +1,5 @@
-/**
- * Procesamiento de texto en español para búsqueda léxica.
- * Stemming por truncamiento: después de sacar plurales, se conservan los primeros 6 caracteres.
- * Es simple, predecible y funciona bien en español ("despidieron" y "despido" → "despid").
- */
+// Stemming by truncation: drop the plural and keep 6 characters.
+// Simple, and it works well enough in Spanish ("despidieron" and "despido" -> "despid").
 
 const STOPWORDS = new Set(
   (

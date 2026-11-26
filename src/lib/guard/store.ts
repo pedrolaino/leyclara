@@ -1,12 +1,7 @@
-/**
- * Almacenamiento clave-valor para límites de uso y caché.
- *  - En memoria: alcanza para desarrollo y un solo servidor.
- *  - Upstash Redis (REST, plan gratis): compartido entre instancias serverless.
- */
+// In memory works for dev and a single server. Serverless needs Upstash so instances share counts.
 export interface KV {
   get(key: string): Promise<string | null>;
   set(key: string, value: string, ttlSeconds: number): Promise<void>;
-  /** Incrementa y devuelve el nuevo valor; fija el TTL en el primer incremento. */
   incr(key: string, ttlSeconds: number): Promise<number>;
 }
 

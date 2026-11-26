@@ -1,6 +1,4 @@
-/**
- * Parsea data/raw/<id>.html → data/laws/<id>.json (estructura + artículos + vigencia).
- */
+// data/raw/<id>.html -> data/laws/<id>.json
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { LAWS } from "../src/config/laws";
 import { decodeHtmlBytes } from "../src/lib/ingest/html";
@@ -16,8 +14,8 @@ for (const source of LAWS) {
   const active = doc.articles.filter((a) => !a.repealed && !a.formal);
   const untitled = doc.articles.filter((a) => !a.title && !a.repealed).length;
   console.log(
-    `✓ ${doc.shortName}: ${doc.articles.length} artículos (${active.length} vigentes indexables, ` +
-      `${doc.articles.length - active.length} derogados/de forma, ${untitled} sin epígrafe). ` +
-      `Última modificación: ${doc.lastAmendment?.text ?? "—"} (${doc.lastAmendment?.date ?? "—"})`,
+    `✓ ${doc.shortName}: ${doc.articles.length} articles (${active.length} indexed, ` +
+      `${doc.articles.length - active.length} repealed or formal, ${untitled} without title). ` +
+      `Last amendment: ${doc.lastAmendment?.text ?? "none"} (${doc.lastAmendment?.date ?? "-"})`,
   );
 }

@@ -25,7 +25,7 @@ interface Props {
   laws: LawSummary[];
   maxChars: number;
   turnstileSiteKey?: string;
-  /** Presentación que se muestra solo antes de la primera pregunta. */
+  // Shown until the first question
   intro?: React.ReactNode;
 }
 

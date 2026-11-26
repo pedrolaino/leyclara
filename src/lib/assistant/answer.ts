@@ -1,13 +1,4 @@
-/**
- * Pipeline de respuesta. Regla principal: si no hay artículos relevantes, NO se llama al modelo.
- *
- *   pregunta ─► ¿tema legal no cubierto? ─► búsqueda en las 3 leyes ─► ¿hay fuente suficiente?
- *                       │                                                   │ sí
- *                       ▼ (sin señales de las 3 áreas)                       ▼
- *                 "no cubrimos ese tema"                     modelo con SOLO esos artículos
- *                                                                           │
- *                                         validación: citas ⊂ artículos dados, si no → "no encontrado"
- */
+// Answer pipeline. If no relevant article is found, the LLM is never called.
 import { AREAS, type AreaId, areaById, LAWS } from "@/config/laws";
 import type { ChatProvider, EmbeddingProvider } from "@/lib/ai/types";
 import { normalize } from "@/lib/retrieval/text";
@@ -18,13 +9,11 @@ import { buildUserPrompt, RESPONSE_SCHEMA, SYSTEM_PROMPT } from "./prompt";
 import type { AskResult, CitedArticle, SourceInfo } from "./types";
 
 export interface Thresholds {
-  /** Cobertura léxica mínima del mejor artículo si la pregunta tiene señales de un área. */
   minCoverage: number;
-  /** Cobertura mínima si la pregunta NO tiene ninguna señal de las tres áreas. */
+  // Stricter when nothing in the question points to one of the three areas
   minCoverageNoArea: number;
-  /** Similitud coseno mínima (solo con embeddings). Calibrar con `npm run eval`. */
+  // Only with embeddings. Tune it with npm run eval.
   minCosine: number;
-  /** Cuántos artículos se le pasan al modelo. */
   maxArticles: number;
 }
 
@@ -76,20 +65,19 @@ export async function answerQuestion(question: string, deps: AnswerDeps, context
   const areas = detectAreas(`${question} ${context ?? ""}`);
   const uncovered = detectUncovered(question);
 
-  // 1. Tema legal que no cubrimos y sin señales de las tres áreas: ni buscamos.
+  // Uncovered legal topic: no need to search.
   if (uncovered && (areas.length === 0 || uncovered.exclusive)) {
     return notCovered(uncovered, meta({ reason: "uncovered-topic" }));
   }
 
-  // 2. Búsqueda en todas las leyes (híbrida si hay embeddings).
   const index = deps.embeddingIndex === undefined ? getEmbeddingIndex(corpus) : deps.embeddingIndex;
   let queryVector: number[] | undefined;
-  // El vector de la consulta tiene que salir del mismo modelo que el índice.
+  // Query and index vectors must come from the same model.
   if (index && deps.embedder && index.model === deps.embedder.model) {
     try {
       [queryVector] = await deps.embedder.embed([context ? `${context}\n${question}` : question], "query");
     } catch (err) {
-      console.warn("[embeddings] falló el embedding de la consulta; sigo con búsqueda léxica", err);
+      console.warn("[embeddings] query embedding failed, falling back to lexical search", err);
     }
   }
   const result = search(question, { context, queryVector, embeddingIndex: index, k: 8 });
@@ -103,14 +91,13 @@ export async function answerQuestion(question: string, deps: AnswerDeps, context
 
   const relevant = result.hits.filter((h) => isRelevant(h, areas.length > 0, t)).slice(0, t.maxArticles);
 
-  // 3. Sin fuente suficiente: no se llama al modelo.
+  // No source, no LLM call.
   if (relevant.length === 0) {
     if (uncovered) return notCovered(uncovered, m("uncovered-topic"));
     if (areas.length) return notFound(areas[0], m("no-relevant-articles"));
     return offTopic(m("no-relevant-articles"));
   }
 
-  // 4. El modelo responde solo con esos artículos.
   const allowed = new Map(relevant.map((h) => [h.article.id, h]));
   const raw = (await deps.chat.generateJson({
     system: SYSTEM_PROMPT,
@@ -127,7 +114,7 @@ export async function answerQuestion(question: string, deps: AnswerDeps, context
     .slice(0, 3);
 
   if (raw.status === "off_topic") return offTopic(m("model-off-topic"));
-  // 5. Validación: sin citas válidas no hay respuesta, aunque el modelo haya escrito algo.
+  // Drop the answer if it doesn't cite any of the articles we gave it.
   if (raw.status !== "answered" || !raw.answer?.trim() || cited.length === 0) {
     const reason = raw.status === "answered" ? "no-valid-citations" : "model-not-found";
     if (uncovered) return notCovered(uncovered, m(reason));
@@ -180,11 +167,11 @@ function uniqueSources(hits: ArticleHit[]): SourceInfo[] {
   return [...seen.values()];
 }
 
-/** Respuesta sin IA (proveedor "mock"): cita textual del comienzo del mejor artículo. */
+// Used by the mock provider: quotes the start of the best article.
 function extractiveAnswer(hit: ArticleHit) {
   const lines = hit.article.text.split("\n");
   let quote = /^(.{40,400}?[.;])(\s|$)/.exec(lines[0])?.[1] ?? lines[0].slice(0, 400);
-  // "…por los siguientes plazos:" → sumamos los incisos que siguen, hasta un tope.
+  // If it ends in ":", add the items that follow.
   if (quote.endsWith(":")) {
     for (const l of lines.slice(1)) {
       if (quote.length + l.length > 450) break;

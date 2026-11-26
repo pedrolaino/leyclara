@@ -1,7 +1,4 @@
-/**
- * Cloudflare Turnstile: captcha invisible y gratuito. Si no hay TURNSTILE_SECRET_KEY
- * (desarrollo), la verificación se saltea.
- */
+// Without TURNSTILE_SECRET_KEY (local dev) the check is skipped.
 export async function verifyTurnstile(secret: string | undefined, token: unknown, ip?: string): Promise<boolean> {
   if (!secret) return true;
   if (typeof token !== "string" || !token) return false;

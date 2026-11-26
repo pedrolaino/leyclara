@@ -1,10 +1,9 @@
-/** "2026-03-06" → "6/3/2026" (formato argentino, sin depender de la zona horaria). */
+// "2026-03-06" -> "6/3/2026", without going through Date and time zones.
 export function formatDate(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
   return `${d}/${m}/${y}`;
 }
 
-/** Datos públicos de cada ley que necesita el cliente (sin el texto completo). */
 export interface LawSummary {
   id: string;
   name: string;

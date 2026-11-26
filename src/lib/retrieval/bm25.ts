@@ -1,4 +1,3 @@
-/** BM25 clásico (Okapi) sobre documentos ya tokenizados. */
 export interface Bm25Index {
   docs: string[][];
   df: Map<string, number>;
@@ -26,7 +25,6 @@ export function idf(index: Bm25Index, term: string): number {
   return Math.log(1 + (n - df + 0.5) / (df + 0.5));
 }
 
-/** Devuelve el puntaje de cada documento para la consulta (términos con peso opcional). */
 export function scoreBm25(index: Bm25Index, query: Map<string, number>): Float64Array {
   const scores = new Float64Array(index.docs.length);
   for (const [term, weight] of query) {

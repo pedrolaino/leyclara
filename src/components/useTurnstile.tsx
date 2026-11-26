@@ -1,9 +1,6 @@
 "use client";
 
-/**
- * Cloudflare Turnstile en modo invisible: solo muestra un desafío si sospecha de un bot.
- * Sin NEXT_PUBLIC_TURNSTILE_SITE_KEY no hace nada (desarrollo).
- */
+// Invisible Turnstile. Does nothing without NEXT_PUBLIC_TURNSTILE_SITE_KEY.
 import Script from "next/script";
 import { useCallback, useRef } from "react";
 
