@@ -1,6 +1,6 @@
 // Needs a Postgres with pgvector: TEST_DATABASE_URL=postgres://... npm test
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import type { EmbeddingProvider } from "@/lib/ai/types";
+import { QuotaExceededError, type EmbeddingProvider } from "@/lib/ai/types";
 import { answerQuestion } from "@/lib/assistant/answer";
 import { MockChat } from "@/lib/ai/mock";
 import { connect, migrate, type Sql } from "@/lib/db/client";
@@ -62,6 +62,20 @@ describe.skipIf(!url)("postgres", () => {
     expect(third).toEqual({ embedded: 1, unchanged: chunks.length - 2, removed: 1 });
 
     await syncEmbeddings(sql, chunks, embedder);
+  });
+
+  it("waits and retries when the provider is out of quota", async () => {
+    const embedder = fakeEmbedder("quota");
+    const embed = embedder.embed.bind(embedder);
+    let failures = 1;
+    embedder.embed = async (texts, kind) => {
+      if (failures-- > 0) throw new QuotaExceededError();
+      return embed(texts, kind);
+    };
+    const waits: number[] = [];
+    const r = await syncEmbeddings(sql, chunks.slice(0, 3), embedder, { wait: async (ms) => void waits.push(ms) });
+    expect(r.embedded).toBe(3);
+    expect(waits).toHaveLength(1);
   });
 
   it("never mixes vectors from different models", async () => {
