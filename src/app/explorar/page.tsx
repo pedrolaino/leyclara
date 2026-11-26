@@ -10,8 +10,8 @@ export default function ExplorePage() {
   const laws = getLawSummaries();
   return (
     <section className="explore">
-      <h1>Explorar las leyes</h1>
-      <p className="lead">Leé el texto completo, organizado por títulos y capítulos, y buscá por palabra.</p>
+      <h1>Las leyes</h1>
+      <p className="lead">Leé cada ley completa, ordenada por títulos y capítulos, o buscá una palabra.</p>
       <div className="law-list">
         {laws.map((law) => {
           const area = AREAS.find((a) => a.id === law.area)!;

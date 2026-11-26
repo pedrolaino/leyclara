@@ -47,7 +47,7 @@ export function ResultCard({ result, onAsk, question, disabled }: Props) {
       return (
         <article className="card notice">
           <p className="notice-title">
-            <Info aria-hidden size={18} /> Eso está fuera de lo que puedo responder
+            <Info aria-hidden size={18} /> Esa pregunta no es sobre trabajo, compras ni tránsito
           </p>
           <p>{result.message}</p>
           <Suggestions items={result.suggestions} onPick={(q) => onAsk(q)} disabled={disabled} />
@@ -58,7 +58,7 @@ export function ResultCard({ result, onAsk, question, disabled }: Props) {
       return (
         <article className="card notice">
           <p className="notice-title">
-            <Info aria-hidden size={18} /> Ese tema legal no está cubierto
+            <Info aria-hidden size={18} /> Las consultas sobre {result.topic} no están cubiertas
           </p>
           <p>{result.message}</p>
           <dl className="orientation">
@@ -67,7 +67,7 @@ export function ResultCard({ result, onAsk, question, disabled }: Props) {
             <dt>A quién consultar</dt>
             <dd>{result.whereToAsk}</dd>
           </dl>
-          <Suggestions label="Lo que sí puedo responder" items={result.suggestions} onPick={(q) => onAsk(q)} disabled={disabled} />
+          <Suggestions label="Esto sí lo puedo responder" items={result.suggestions} onPick={(q) => onAsk(q)} disabled={disabled} />
         </article>
       );
 
@@ -75,7 +75,7 @@ export function ResultCard({ result, onAsk, question, disabled }: Props) {
       return (
         <article className="card notice">
           <p className="notice-title">
-            <SearchX aria-hidden size={18} /> No encontré un artículo que lo responda con seguridad
+            <SearchX aria-hidden size={18} /> No encontré un artículo que responda eso
           </p>
           <p>{result.message}</p>
           <Suggestions items={result.suggestions} onPick={(q) => onAsk(q)} disabled={disabled} />
@@ -173,12 +173,10 @@ function Suggestions({
 }
 
 function MetaNote({ meta }: { meta: AskResult["meta"] }) {
-  if (meta.provider !== "mock" && !meta.cached) return null;
+  if (meta.provider !== "mock") return null;
   return (
     <p className="meta-note">
-      {meta.provider === "mock" &&
-        "Modo sin IA: la respuesta es la cita textual del artículo más relevante. "}
-      {meta.cached && "Respuesta guardada de una consulta anterior."}
+      No hay un modelo de IA configurado, así que la respuesta es la cita del artículo que más coincide.
     </p>
   );
 }

@@ -1,4 +1,4 @@
-import { ExternalLink } from "lucide-react";
+import { ChevronLeft, ExternalLink } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -26,7 +26,9 @@ export default async function LawPage({ params }: Params) {
   return (
     <section className="explore">
       <p className="crumbs">
-        <Link href="/explorar">← Todas las leyes</Link>
+        <Link href="/explorar">
+          <ChevronLeft aria-hidden size={14} /> Todas las leyes
+        </Link>
       </p>
       <h1>
         {law.name} <span className="muted">(Ley {law.number})</span>

@@ -8,13 +8,12 @@ export default function Home() {
   const env = getEnv();
   const intro = (
     <section className="hero">
-      <h1>¿Qué dice la ley sobre tu situación?</h1>
+      <h1>Consultá qué dice la ley sobre tu caso</h1>
       <p className="lead">{SITE_TAGLINE}</p>
-      <ul className="badges" aria-label="Características">
-        <li>Basado en el texto oficial de InfoLEG</li>
-        <li>Cita el artículo exacto</li>
-        <li>Si no hay fuente, no inventa</li>
-      </ul>
+      <p className="sources-line">
+        Las respuestas salen del texto actualizado de la Ley de Contrato de Trabajo, la Ley de Defensa del Consumidor
+        y la Ley Nacional de Tránsito publicado en InfoLEG.
+      </p>
     </section>
   );
   return (

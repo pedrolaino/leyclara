@@ -32,7 +32,7 @@ export function LawBrowser({ articles }: { articles: Article[] }) {
       <input
         type="search"
         className="law-search"
-        placeholder="Buscar en esta ley (por ejemplo: vacaciones, garantía, velocidad)"
+        placeholder="Buscá una palabra, por ejemplo: vacaciones"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         aria-label="Buscar en esta ley"
