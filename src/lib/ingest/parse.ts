@@ -137,7 +137,8 @@ export function parseLaw(source: LawSource, html: string, retrievedAt: string): 
         name = nextText.replace(/\.$/, "");
         i++;
       }
-      const label = `${HEADING_LABEL[stripAccents(h[1])]} ${h[2]}`;
+      const numeral = /^[ÚU]NICO$/.test(h[2]) ? "único" : h[2];
+      const label = `${HEADING_LABEL[stripAccents(h[1])]} ${numeral}`;
       path[level] = name ? `${label}: ${capitalize(name)}` : label;
       path.length = level + 1;
       continue;

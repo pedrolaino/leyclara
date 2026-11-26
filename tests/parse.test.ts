@@ -81,6 +81,10 @@ describe("parseLaw", () => {
     expect(doc.articles[2].repealed).toBe(true);
     expect(doc.articles[3].formal).toBe(true);
   });
+  it("writes UNICO chapters as único", () => {
+    const one = parseLaw(LAWS[2], "<p>TITULO I</p><p>PRINCIPIOS</p><p>CAPITULO UNICO</p><p>ARTICULO 1º — Objeto. Texto del artículo.</p>", "2026-11-26");
+    expect(one.articles[0].path).toEqual(["Título I: Principios", "Capítulo único"]);
+  });
   it("finds the latest amendment", () => {
     expect(doc.lastAmendment).toEqual({ date: "2020-02-01", text: "Ley Nº 9.999" });
   });
