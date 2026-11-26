@@ -1,4 +1,4 @@
-// To add a law: add it here, then run laws:fetch, laws:parse and index:build.
+// To add a law: add it here, then run npm run ingest -- --fetch.
 
 export type AreaId = "trabajo" | "consumo" | "transito";
 

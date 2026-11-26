@@ -9,8 +9,10 @@ import { createChatProvider, createEmbeddingProvider } from "../src/lib/ai";
 import { answerQuestion } from "../src/lib/assistant/answer";
 import type { AskResult } from "../src/lib/assistant/types";
 import { getEnv } from "../src/lib/env";
-import { getCorpus, getEmbeddingIndex } from "../src/lib/retrieval/corpus";
+import { connect } from "../src/lib/db/client";
+import { modelKey } from "../src/lib/db/embeddings";
 import { search } from "../src/lib/retrieval/search";
+import { createVectorSearch } from "../src/lib/retrieval/vector";
 
 interface Question {
   id: string;
@@ -26,9 +28,10 @@ const questions: Question[] = JSON.parse(readFileSync(`eval/${setName}.json`, "u
 const env = getEnv();
 const chat = createChatProvider(env);
 const embedder = createEmbeddingProvider(env);
-const index = getEmbeddingIndex(getCorpus());
+const sql = env.databaseUrl && embedder ? connect(env.databaseUrl) : null;
+const vectorSearch = sql && embedder ? createVectorSearch(sql, embedder) : null;
 const usesModel = chat.name !== "mock";
-const retrievalMode = index && embedder ? "hybrid" : "lexical";
+const retrievalMode = vectorSearch ? "hybrid" : "lexical";
 
 type Row = Question & { got: AskResult; rank?: number; routeOk: boolean; citationOk?: boolean; ms: number };
 const rows: Row[] = [];
@@ -39,8 +42,7 @@ for (const q of questions) {
   try {
     got = await answerQuestion(q.question, {
       chat,
-      embedder,
-      embeddingIndex: index,
+      vectorSearch,
       maxAnswerChars: env.limits.maxAnswerChars,
       maxOutputTokens: env.limits.maxOutputTokens,
     });
@@ -53,9 +55,8 @@ for (const q of questions) {
 
   let rank: number | undefined;
   if (q.expected.articles) {
-    let vector: number[] | undefined;
-    if (index && embedder) [vector] = await embedder.embed([q.question], "query");
-    const hits = search(q.question, { k: 10, queryVector: vector, embeddingIndex: index }).hits;
+    const vectorScores = vectorSearch ? await vectorSearch(q.question) : null;
+    const hits = search(q.question, { k: 10, vectorScores }).hits;
     const pos = hits.findIndex((h) => q.expected.articles!.includes(h.article.id));
     rank = pos >= 0 ? pos + 1 : undefined;
   }
@@ -91,7 +92,7 @@ const summary = [
   `# Eval, ${setName === "questions" ? "main set" : `${setName} set`} (${new Date().toISOString().slice(0, 10)})`,
   "",
   `- Model: \`${chat.name}/${chat.model}\``,
-  `- Search: ${retrievalMode}${index ? ` (embeddings ${index.provider}/${index.model}, ${index.dimensions} dims)` : ""}`,
+  `- Search: ${retrievalMode}${vectorSearch && embedder ? ` (embeddings ${modelKey(embedder)})` : ""}`,
   `- Questions: ${rows.length} (${answerable.length} with an expected article)${usesModel ? "" : `; ${rows.length - routed.length} need a model and are left out of routing`}`,
   "",
   "## Search: is the expected article found?",
@@ -138,3 +139,4 @@ const file = `eval/results/${setName === "questions" ? "" : `${setName}-`}${chat
 writeFileSync(file, summary);
 console.log(summary.split("## Details")[0]);
 console.log(`Report: ${file}`);
+await sql?.end();

@@ -1,9 +1,9 @@
 // Answer pipeline. If no relevant article is found, the LLM is never called.
 import { AREAS, type AreaId, areaById, LAWS } from "@/config/laws";
-import type { ChatProvider, EmbeddingProvider } from "@/lib/ai/types";
+import type { ChatProvider } from "@/lib/ai/types";
 import { normalize } from "@/lib/retrieval/text";
-import { getCorpus, getEmbeddingIndex, type EmbeddingIndex } from "@/lib/retrieval/corpus";
 import { type ArticleHit, search } from "@/lib/retrieval/search";
+import type { VectorSearch } from "@/lib/retrieval/vector";
 import { AREA_HINTS, EXPANSIONS, UNCOVERED_TOPICS, type UncoveredTopic } from "@/lib/scope/lexicon";
 import { buildUserPrompt, RESPONSE_SCHEMA, SYSTEM_PROMPT } from "./prompt";
 import type { AskResult, CitedArticle, SourceInfo } from "./types";
@@ -26,8 +26,7 @@ export const DEFAULT_THRESHOLDS: Thresholds = {
 
 export interface AnswerDeps {
   chat: ChatProvider;
-  embedder?: EmbeddingProvider | null;
-  embeddingIndex?: EmbeddingIndex | null;
+  vectorSearch?: VectorSearch | null;
   maxAnswerChars: number;
   maxOutputTokens: number;
   thresholds?: Partial<Thresholds>;
@@ -53,7 +52,6 @@ export function isRelevant(hit: ArticleHit, hasArea: boolean, t: Thresholds): bo
 
 export async function answerQuestion(question: string, deps: AnswerDeps, context?: string): Promise<AskResult> {
   const t = { ...DEFAULT_THRESHOLDS, ...deps.thresholds };
-  const corpus = getCorpus();
   const meta = (extra: Partial<AskResult["meta"]> = {}): AskResult["meta"] => ({
     retrieval: "skipped",
     candidates: [],
@@ -70,17 +68,8 @@ export async function answerQuestion(question: string, deps: AnswerDeps, context
     return notCovered(uncovered, meta({ reason: "uncovered-topic" }));
   }
 
-  const index = deps.embeddingIndex === undefined ? getEmbeddingIndex(corpus) : deps.embeddingIndex;
-  let queryVector: number[] | undefined;
-  // Query and index vectors must come from the same model.
-  if (index && deps.embedder && index.model === deps.embedder.model) {
-    try {
-      [queryVector] = await deps.embedder.embed([context ? `${context}\n${question}` : question], "query");
-    } catch (err) {
-      console.warn("[embeddings] query embedding failed, falling back to lexical search", err);
-    }
-  }
-  const result = search(question, { context, queryVector, embeddingIndex: index, k: 8 });
+  const vectorScores = deps.vectorSearch ? await deps.vectorSearch(context ? `${context}\n${question}` : question) : null;
+  const result = search(question, { context, vectorScores, k: 8 });
   const candidates = result.hits.map((h) => ({
     id: h.article.id,
     score: round(h.score),
