@@ -102,6 +102,14 @@ describe.skipIf(!url)("postgres", () => {
     await syncEmbeddings(sql, chunks, embedder);
   });
 
+  it("doesn't use vectors until every chunk has one", async () => {
+    const embedder = fakeEmbedder();
+    await sql`DELETE FROM chunk_embeddings WHERE chunk_id LIKE 'lnt-%' AND model = ${modelKey(embedder)}`;
+    expect(await createVectorSearch(sql, embedder)("velocidad máxima")).toBeNull();
+    await syncEmbeddings(sql, chunks, embedder);
+    expect(await createVectorSearch(sql, embedder)("velocidad máxima")).not.toBeNull();
+  });
+
   it("answers with hybrid search when vectors are there", async () => {
     const r = await answerQuestion("¿Cuál es la velocidad máxima en una autopista?", {
       chat: new MockChat(),
