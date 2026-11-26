@@ -8,6 +8,14 @@ import {
   ProviderError,
 } from "./types";
 
+interface ChatResponse {
+  choices: { message?: { content?: string } }[];
+}
+
+interface EmbeddingsResponse {
+  data: { embedding: number[] }[];
+}
+
 export class OpenAICompatibleChat implements ChatProvider {
   readonly name = "openai-compatible";
   constructor(
@@ -17,7 +25,7 @@ export class OpenAICompatibleChat implements ChatProvider {
   ) {}
 
   async generateJson(req: JsonRequest): Promise<unknown> {
-    const data = await postJson(
+    const data = await postJson<ChatResponse>(
       `${this.baseUrl.replace(/\/$/, "")}/chat/completions`,
       this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {},
       {
@@ -32,7 +40,7 @@ export class OpenAICompatibleChat implements ChatProvider {
         ],
       },
     );
-    const text: string | undefined = data?.choices?.[0]?.message?.content;
+    const text = data.choices?.[0]?.message?.content;
     if (!text) throw new ProviderError("Empty response");
     return parseJsonLoose(text);
   }
@@ -50,13 +58,14 @@ export class OpenAICompatibleEmbeddings implements EmbeddingProvider {
   async embed(texts: string[]): Promise<number[][]> {
     const out: number[][] = [];
     for (let i = 0; i < texts.length; i += 64) {
-      const data = await postJson(
+      const data = await postJson<EmbeddingsResponse>(
         `${this.baseUrl.replace(/\/$/, "")}/embeddings`,
         this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {},
         { model: this.model, input: texts.slice(i, i + 64) },
         60_000,
       );
-      out.push(...data.data.map((d: { embedding: number[] }) => d.embedding));
+      if (!data.data) throw new ProviderError("Embedding response without data");
+      out.push(...data.data.map((d) => d.embedding));
     }
     return out;
   }
