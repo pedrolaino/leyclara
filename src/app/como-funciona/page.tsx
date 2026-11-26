@@ -13,57 +13,45 @@ export default function HowItWorks() {
     <section className="prose">
       <h1>Cómo funciona</h1>
       <p className="lead">
-        Escribís tu situación como se la contarías a alguien. {SITE_NAME} busca en el texto de tres leyes, encuentra los
-        artículos que aplican y te explica qué dicen.
+        {SITE_NAME} busca la respuesta en el texto de tres leyes: la Ley de Contrato de Trabajo, la Ley de Defensa del
+        Consumidor y la Ley Nacional de Tránsito. Usa la versión actualizada que publica InfoLEG, con todas las reformas
+        incorporadas.
       </p>
 
-      <h2>Qué leyes usa</h2>
+      <h2>Un ejemplo</h2>
+      <p>
+        Si escribís «me echaron después de cuatro años, ¿qué me tienen que pagar?», la búsqueda también prueba con las
+        palabras que usa la ley, como «despido» e «indemnización», y encuentra el artículo 245 de la Ley de Contrato de
+        Trabajo. El modelo de IA recibe ese artículo y algunos más que podrían aplicar, y escribe la respuesta usando solo
+        esos textos. Debajo de la respuesta aparece el artículo completo, tal como está en la ley.
+      </p>
+
+      <h2>Cuándo no responde</h2>
+      <p>
+        Si ningún artículo coincide con tu pregunta, no se consulta al modelo y te avisamos que no encontramos respuesta.
+        Las preguntas sobre temas de otras leyes, como alquileres, divorcios o jubilaciones, reciben una orientación sobre
+        dónde se regula el tema y a quién consultar. También se descarta cualquier respuesta del modelo que cite un
+        artículo que no estaba entre los que recibió.
+      </p>
+
+      <h2>Límites</h2>
+      <p>
+        Es información general. Tu convenio colectivo puede darte más derechos que la ley, y cada provincia o municipio
+        puede tener sus propias normas de tránsito. Para un caso concreto, consultá con un abogado o con el organismo que
+        corresponda. Como es una demo con un cupo diario de consultas, a veces se agota; al día siguiente vuelve a
+        funcionar.
+      </p>
+
+      <h2>Textos usados</h2>
       <ul>
         {laws.map((l) => (
           <li key={l.id}>
-            <strong>
-              {l.name} ({l.number}).
-            </strong>{" "}
-            {vigenciaText(l)}.{" "}
+            {l.name} ({l.number}). {vigenciaText(l)}.{" "}
             <a href={l.pageUrl} target="_blank" rel="noopener noreferrer">
               Ver en InfoLEG <ExternalLink aria-hidden size={14} />
             </a>
           </li>
         ))}
-      </ul>
-      <p>
-        Se usa el texto actualizado de InfoLEG, que ya incluye las reformas posteriores a cada ley. Cada artículo citado
-        muestra el texto oficial y las notas de modificación.
-      </p>
-
-      <h2>Qué pasa con tu pregunta</h2>
-      <ol>
-        <li>
-          Si es de un tema que no está cargado, como alquileres, familia, jubilaciones o impuestos, te decimos dónde se
-          regula y a quién consultar.
-        </li>
-        <li>
-          Si no, se busca en las tres leyes a la vez. Antes, las palabras de todos los días se traducen a las de la ley:
-          «me echaron» también se busca como «despido».
-        </li>
-        <li>
-          Si ningún artículo coincide lo suficiente, no se consulta al modelo de IA y te avisamos que no encontramos una
-          respuesta.
-        </li>
-        <li>
-          Si hay artículos que coinciden, el modelo escribe una respuesta corta usando solo esos artículos. Si cita un
-          artículo que no se le pasó, la respuesta se descarta.
-        </li>
-      </ol>
-
-      <h2>Límites</h2>
-      <ul>
-        <li>Es información general. Para un caso concreto, consultá con un abogado o con el organismo que corresponda.</li>
-        <li>
-          Tu convenio colectivo o estatuto puede darte más derechos que la Ley de Contrato de Trabajo. En tránsito, cada
-          provincia y municipio puede tener normas propias.
-        </li>
-        <li>Hay un máximo de preguntas por día. Si se alcanza, se puede volver a preguntar al día siguiente.</li>
       </ul>
 
       <p>
