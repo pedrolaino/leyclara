@@ -13,7 +13,8 @@
     "eval": "tsx eval/run.ts",
     "lint": "eslint .",
     "db:setup": "tsx scripts/db-setup.ts",
-    "ingest": "tsx scripts/ingest.ts"
+    "ingest": "tsx scripts/ingest.ts",
+    "e2e": "playwright test"
   },
   "engines": {
     "node": ">=20"
@@ -29,6 +30,7 @@
     "server-only": "^0.0.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/node": "^22.20.7",
     "@types/react": "^19.3.3",
     "@types/react-dom": "^19.3.0",
