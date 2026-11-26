@@ -5,6 +5,7 @@
 
 /* Highlighter theme: ink on white, IBM Plex, and one marker yellow used only on what matters. */
 :root {
+  color-scheme: light;
   --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-heading: var(--font-body);
   --font-quote: "IBM Plex Serif", Georgia, serif;
@@ -55,28 +56,28 @@
   --duration: 180ms;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg: #161615;
-    --color-surface: #1d1d1b;
-    --color-surface-2: #262624;
-    --color-text: #ececea;
-    --color-muted: #a8a8a2;
-    --color-border: #3a3a36;
-    --color-primary: #ececea;
-    --color-on-primary: #161615;
-    --color-link: #8db4ff;
-    --color-focus: #8db4ff;
-    --color-chip-bg: var(--color-surface);
-    --color-hover-bg: #2e2a17;
-    --color-notice: #e8c060;
-    --color-notice-bg: #2a2412;
-    --color-error: #ff8a80;
-    --color-quote-bar: #c99a1a;
-    --mark: #6b5a12;
-    --mark-text: #fdf6d8;
-    --shadow-form: none;
-  }
+/* Set on <html> by the script in layout.tsx: the saved choice, or the system theme. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: #161615;
+  --color-surface: #1d1d1b;
+  --color-surface-2: #262624;
+  --color-text: #ececea;
+  --color-muted: #a8a8a2;
+  --color-border: #3a3a36;
+  --color-primary: #ececea;
+  --color-on-primary: #161615;
+  --color-link: #8db4ff;
+  --color-focus: #8db4ff;
+  --color-chip-bg: var(--color-surface);
+  --color-hover-bg: #2e2a17;
+  --color-notice: #e8c060;
+  --color-notice-bg: #2a2412;
+  --color-error: #ff8a80;
+  --color-quote-bar: #c99a1a;
+  --mark: #6b5a12;
+  --mark-text: #fdf6d8;
+  --shadow-form: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -198,6 +199,7 @@ button:disabled {
 
 .site-header nav {
   display: flex;
+  align-items: center;
   gap: var(--space-4);
 }
 
@@ -209,6 +211,23 @@ button:disabled {
 }
 
 .site-header nav a:hover {
+  color: var(--color-text);
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-3)) calc(-1 * var(--space-2)) 0;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--color-muted);
+}
+
+.theme-toggle:hover {
   color: var(--color-text);
 }
 

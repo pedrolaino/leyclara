@@ -52,6 +52,18 @@ test("the logo goes back to the start of the home page", async ({ page }) => {
   await expect(page.getByRole("article", { name: "Respuesta" })).toHaveCount(0);
 });
 
+test("the theme button switches to light mode and remembers it", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.goto("/");
+  const bg = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  expect(await bg()).not.toBe("rgb(255, 255, 255)");
+  await page.getByRole("button", { name: "Cambiar a modo claro" }).click();
+  expect(await bg()).toBe("rgb(255, 255, 255)");
+  await page.reload();
+  expect(await bg()).toBe("rgb(255, 255, 255)");
+  await expect(page.getByRole("button", { name: "Cambiar a modo oscuro" })).toBeVisible();
+});
+
 test("off topic questions are declined", async ({ page }) => {
   await page.goto("/");
   await ask(page, "¿Quién ganó el último mundial de fútbol?");
