@@ -2,10 +2,10 @@
 export const SITE_NAME = "Ley Clara";
 
 export const SITE_TAGLINE =
-  "Preguntá en tus palabras sobre trabajo, compras y tránsito. Te respondemos con el artículo exacto de la ley.";
+  "Escribí lo que te pasó con tus palabras y te mostramos qué dice la ley, con el artículo y su texto oficial.";
 
 export const SITE_DISCLAIMER =
-  "Información general basada en el texto oficial de las leyes. No es asesoramiento legal.";
+  "Esto es información general sobre lo que dice la ley. No reemplaza el consejo de un abogado.";
 
 /** Límites de uso (se pueden pisar con variables de entorno, ver src/lib/env.ts). */
 export const DEFAULT_LIMITS = {

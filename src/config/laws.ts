@@ -76,7 +76,7 @@ export const AREAS: Area[] = [
       "¿Cuánto dura el período de prueba?",
     ],
     referral:
-      "Para tu caso concreto, consultá con un abogado laboralista, tu sindicato o la autoridad de trabajo de tu jurisdicción. Tu convenio colectivo puede darte más derechos.",
+      "Para tu caso, consultá con un abogado laboralista, tu sindicato o la oficina de trabajo de tu provincia. Tu convenio colectivo puede darte más derechos que la ley.",
   },
   {
     id: "consumo",
@@ -90,7 +90,7 @@ export const AREAS: Area[] = [
       "Quiero dar de baja un servicio y no me dejan",
     ],
     referral:
-      "Para reclamar, podés acudir a la oficina de Defensa del Consumidor de tu municipio o provincia, o consultar con un abogado.",
+      "Si querés reclamar, la oficina de Defensa del Consumidor de tu municipio o provincia recibe denuncias. También podés consultar con un abogado.",
   },
   {
     id: "transito",
@@ -104,7 +104,7 @@ export const AREAS: Area[] = [
       "¿Cuál es la velocidad máxima en una autopista?",
     ],
     referral:
-      "Cada provincia y municipio puede tener normas propias de tránsito. Para una multa o un acta concreta, consultá con la autoridad que la labró o con un abogado.",
+      "Cada provincia y municipio puede tener sus propias normas de tránsito. Si te labraron un acta, consultá en el juzgado de faltas que la tramita o con un abogado.",
   },
 ];
 

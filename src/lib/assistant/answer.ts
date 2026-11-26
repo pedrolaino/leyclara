@@ -223,8 +223,7 @@ const allExamples = () => AREAS.map((a) => a.examples[0]);
 export function offTopic(meta: AskResult["meta"]): AskResult {
   return {
     kind: "off_topic",
-    message:
-      "Solo puedo responder preguntas sobre tus derechos en tres temas: trabajo, compras y consumo, y tránsito. Probá con alguna de estas:",
+    message: "Respondo sobre derechos en el trabajo, en compras y en tránsito. Por ejemplo:",
     suggestions: allExamples(),
     meta,
   };
@@ -234,7 +233,7 @@ export function notCovered(topic: UncoveredTopic, meta: AskResult["meta"]): AskR
   return {
     kind: "not_covered",
     topic: topic.label,
-    message: `Las consultas sobre ${topic.label} no están cubiertas: este asistente solo usa la ${LAWS.map((l) => `${l.name}`).join(", la ").replace(/, la ([^,]+)$/, " y la $1")}.`,
+    message: `Acá solo están cargadas la ${LAWS.map((l) => l.name).join(", la ").replace(/, la ([^,]+)$/, " y la $1")}.`,
     whereRegulated: topic.whereRegulated,
     whereToAsk: topic.whereToAsk,
     suggestions: allExamples(),
@@ -247,7 +246,7 @@ export function notFound(area: AreaId, meta: AskResult["meta"]): AskResult {
   return {
     kind: "not_found",
     message:
-      "No encontré un artículo que responda tu pregunta con seguridad, así que prefiero no adivinar. Podés reformularla con más detalle o probar con alguna de estas:",
+      "Sin un artículo que lo respalde, prefiero no responder. Probá contando tu caso con más detalle o con alguna de estas preguntas:",
     area,
     referral: a.referral,
     suggestions: a.examples.slice(0, 3),

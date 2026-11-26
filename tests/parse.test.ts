@@ -74,8 +74,8 @@ describe("parseLaw", () => {
 
   it("reconoce artículos, sufijos bis y la estructura", () => {
     expect(doc.articles.map((a) => a.id)).toEqual(["ldc-1", "ldc-2bis", "ldc-3", "ldc-4"]);
-    expect(doc.articles[1]).toMatchObject({ number: "2 bis", title: "Trato digno", path: ["Título I — Disposiciones generales"] });
-    expect(doc.articles[2].path).toEqual(["Título I — Disposiciones generales", "Capítulo II — Otras"]);
+    expect(doc.articles[1]).toMatchObject({ number: "2 bis", title: "Trato digno", path: ["Título I: Disposiciones generales"] });
+    expect(doc.articles[2].path).toEqual(["Título I: Disposiciones generales", "Capítulo II: Otras"]);
   });
   it("marca derogados y artículos de forma", () => {
     expect(doc.articles[2].repealed).toBe(true);

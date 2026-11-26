@@ -22,10 +22,10 @@ export const MESSAGES = {
   tooLong: (max: number) => `La pregunta es muy larga: el máximo es de ${max} caracteres.`,
   captcha: "No pudimos verificar que seas una persona. Recargá la página y probá de nuevo.",
   ipLimit:
-    "Llegaste al límite de preguntas de hoy para esta demo. Mañana vas a poder seguir preguntando. Mientras tanto, las preguntas de ejemplo siguen disponibles.",
+    "Llegaste al máximo de preguntas por hoy. Mañana podés seguir. Las preguntas de ejemplo siguen funcionando.",
   exhausted:
-    "La demo se agotó por hoy: usa un plan gratuito con un cupo diario de consultas al modelo. Volvé mañana. Las preguntas de ejemplo siguen disponibles.",
-  error: "Hubo un problema al generar la respuesta. Probá de nuevo en un rato.",
+    "Se terminó el cupo diario de consultas al modelo de IA. Volvé mañana. Las preguntas de ejemplo siguen funcionando.",
+  error: "No se pudo generar la respuesta. Probá de nuevo en un rato.",
 };
 
 interface Services {

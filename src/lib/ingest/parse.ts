@@ -146,7 +146,7 @@ export function parseLaw(source: LawSource, html: string, retrievedAt: string): 
         i++;
       }
       const label = `${HEADING_LABEL[stripAccents(h[1])]} ${h[2]}`;
-      path[level] = name ? `${label} — ${capitalize(name)}` : label;
+      path[level] = name ? `${label}: ${capitalize(name)}` : label;
       path.length = level + 1;
       continue;
     }

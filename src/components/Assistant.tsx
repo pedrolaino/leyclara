@@ -1,12 +1,19 @@
 "use client";
 
+import { Briefcase, ShoppingBag, TrafficCone, type LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AREAS } from "@/config/laws";
+import { AREAS, type AreaId } from "@/config/laws";
 import type { ApiError, AskResult } from "@/lib/assistant/types";
 import type { LawSummary } from "@/lib/format";
 import { formatDate } from "@/lib/format";
 import { ResultCard } from "./ResultCard";
 import { useTurnstile } from "./useTurnstile";
+
+const AREA_ICONS: Record<AreaId, LucideIcon> = {
+  trabajo: Briefcase,
+  consumo: ShoppingBag,
+  transito: TrafficCone,
+};
 
 interface Turn {
   id: number;
@@ -72,9 +79,11 @@ export function Assistant({ laws, maxChars, turnstileSiteKey, intro }: Props) {
         <section className="areas" aria-label="Temas que cubre el asistente">
           {AREAS.map((area) => {
             const law = lawFor(area.lawIds[0]);
+            const Icon = AREA_ICONS[area.id];
             return (
               <div key={area.id} className={`area-card area-${area.id}`}>
                 <div className="area-head">
+                  <Icon className="area-icon" aria-hidden size={24} strokeWidth={1.75} />
                   <h2>{area.title}</h2>
                   <p className="area-subtitle">{area.subtitle}</p>
                 </div>
@@ -89,7 +98,7 @@ export function Assistant({ laws, maxChars, turnstileSiteKey, intro }: Props) {
                 </ul>
                 {law && (
                   <p className="area-law">
-                    {law.name} {law.number} · vigente al {formatDate(law.retrievedAt)}
+                    Ley {law.number}, texto vigente al {formatDate(law.retrievedAt)}
                   </p>
                 )}
               </div>
@@ -102,7 +111,9 @@ export function Assistant({ laws, maxChars, turnstileSiteKey, intro }: Props) {
         <section className="conversation" aria-live="polite">
           {turns.map((turn) => (
             <div key={turn.id} className="turn">
-              <p className="question-bubble">{turn.question}</p>
+              <p className="question-bubble">
+                <span>{turn.question}</span>
+              </p>
               {turn.result ? (
                 <ResultCard result={turn.result} onAsk={ask} question={turn.question} disabled={loading} />
               ) : (
@@ -112,7 +123,7 @@ export function Assistant({ laws, maxChars, turnstileSiteKey, intro }: Props) {
                     <i />
                     <i />
                   </span>
-                  Buscando en el texto de las leyes…
+                  Buscando en las leyes…
                 </div>
               )}
             </div>
@@ -137,7 +148,7 @@ export function Assistant({ laws, maxChars, turnstileSiteKey, intro }: Props) {
           value={input}
           maxLength={maxChars}
           rows={2}
-          placeholder={started ? "Hacé otra pregunta…" : "O escribí tu situación, por ejemplo: «trabajo hace 3 años y me echaron»"}
+          placeholder={started ? "Escribí otra pregunta" : "O escribí tu caso, por ejemplo: «trabajo hace 3 años y me echaron»"}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {

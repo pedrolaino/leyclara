@@ -10,17 +10,17 @@ export default function ExplorePage() {
   const laws = getLawSummaries();
   return (
     <section className="explore">
-      <h1>Explorar las leyes</h1>
-      <p className="lead">Leé el texto completo, organizado por títulos y capítulos, y buscá por palabra.</p>
+      <h1>Las leyes</h1>
+      <p className="lead">Leé cada ley completa, ordenada por títulos y capítulos, o buscá una palabra.</p>
       <div className="law-list">
         {laws.map((law) => {
           const area = AREAS.find((a) => a.id === law.area)!;
           return (
             <Link key={law.id} href={`/explorar/${law.id}`} className={`law-card area-${area.id}`}>
               <span>
-                <strong>{law.name}</strong> · Ley {law.number}
+                <strong>{law.name}</strong> (Ley {law.number})
                 <span className="law-meta">
-                  {law.articleCount} artículos vigentes · {vigenciaText(law)}
+                  {law.articleCount} artículos vigentes. {vigenciaText(law)}.
                 </span>
               </span>
             </Link>
