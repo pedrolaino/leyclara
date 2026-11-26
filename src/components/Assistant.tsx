@@ -6,6 +6,7 @@ import { AREAS, type AreaId } from "@/config/laws";
 import type { ApiError, AskResult } from "@/lib/assistant/types";
 import type { LawSummary } from "@/lib/format";
 import { formatDate } from "@/lib/format";
+import { HOME_EVENT } from "./HomeLink";
 import { ResultCard } from "./ResultCard";
 import { useTurnstile } from "./useTurnstile";
 
@@ -41,6 +42,16 @@ export function Assistant({ laws, maxChars, turnstileSiteKey, intro }: Props) {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [turns]);
+
+  const restart = useCallback(() => {
+    setTurns([]);
+    window.scrollTo({ top: 0 });
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener(HOME_EVENT, restart);
+    return () => window.removeEventListener(HOME_EVENT, restart);
+  }, [restart]);
 
   const ask = useCallback(
     async (question: string, context?: string) => {
@@ -165,10 +176,7 @@ export function Assistant({ laws, maxChars, turnstileSiteKey, intro }: Props) {
             <button
               type="button"
               className="ghost"
-              onClick={() => {
-                setTurns([]);
-                window.scrollTo({ top: 0 });
-              }}
+              onClick={restart}
               disabled={loading}
             >
               Volver al inicio

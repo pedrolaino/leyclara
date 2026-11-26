@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
+import { HomeLink } from "@/components/HomeLink";
 import { connection } from "next/server";
 import { SITE_DISCLAIMER, SITE_NAME, SITE_TAGLINE } from "@/config/site";
 import "@fontsource/ibm-plex-sans/latin-400.css";
@@ -25,9 +26,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <header className="site-header">
           <div className="container header-inner">
-            <Link href="/" className="brand">
-              {SITE_NAME}
-            </Link>
+            <HomeLink>{SITE_NAME}</HomeLink>
             <nav aria-label="Principal">
               <Link href="/explorar">Leyes</Link>
               <Link href="/como-funciona">Cómo funciona</Link>
