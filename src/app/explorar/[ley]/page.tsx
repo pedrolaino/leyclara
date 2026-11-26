@@ -7,10 +7,6 @@ import { LawBrowser } from "@/components/LawBrowser";
 import { vigenciaText } from "@/lib/format";
 import { loadLaws } from "@/lib/retrieval/corpus";
 
-export function generateStaticParams() {
-  return LAWS.map((l) => ({ ley: l.id }));
-}
-
 type Params = { params: Promise<{ ley: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {

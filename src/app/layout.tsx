@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
+import { connection } from "next/server";
 import { SITE_DISCLAIMER, SITE_NAME, SITE_TAGLINE } from "@/config/site";
 import "@fontsource/ibm-plex-sans/latin-400.css";
 import "@fontsource/ibm-plex-sans/latin-600.css";
@@ -16,7 +17,9 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // The CSP nonce changes on every request, so pages can't be prerendered.
+  await connection();
   return (
     <html lang="es-AR">
       <body>
