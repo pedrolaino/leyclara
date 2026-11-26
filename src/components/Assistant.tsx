@@ -111,7 +111,9 @@ export function Assistant({ laws, maxChars, turnstileSiteKey, intro }: Props) {
         <section className="conversation" aria-live="polite">
           {turns.map((turn) => (
             <div key={turn.id} className="turn">
-              <p className="question-bubble">{turn.question}</p>
+              <p className="question-bubble">
+                <span>{turn.question}</span>
+              </p>
               {turn.result ? (
                 <ResultCard result={turn.result} onAsk={ask} question={turn.question} disabled={loading} />
               ) : (
@@ -121,7 +123,7 @@ export function Assistant({ laws, maxChars, turnstileSiteKey, intro }: Props) {
                     <i />
                     <i />
                   </span>
-                  Buscando en el texto de las leyes…
+                  Buscando en las leyes…
                 </div>
               )}
             </div>
@@ -146,7 +148,7 @@ export function Assistant({ laws, maxChars, turnstileSiteKey, intro }: Props) {
           value={input}
           maxLength={maxChars}
           rows={2}
-          placeholder={started ? "Hacé otra pregunta…" : "O escribí tu situación, por ejemplo: «trabajo hace 3 años y me echaron»"}
+          placeholder={started ? "Escribí otra pregunta" : "O escribí tu caso, por ejemplo: «trabajo hace 3 años y me echaron»"}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {

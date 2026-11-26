@@ -3,36 +3,35 @@
  * overrides values (and adds a few rules of its own).
  */
 
+/* Highlighter theme: ink on white, IBM Plex, and one marker yellow used only on what matters. */
 :root {
-  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-heading: var(--font-body);
-  --font-quote: var(--font-body);
+  --font-quote: "IBM Plex Serif", Georgia, serif;
 
   --color-bg: #ffffff;
   --color-surface: #ffffff;
-  --color-surface-2: #f3f4f6;
-  --color-text: #1f2328;
-  --color-muted: #59636e;
-  --color-border: #d0d7de;
-  --color-primary: #1f2328;
+  --color-surface-2: #f4f4f2;
+  --color-text: #1a1a1a;
+  --color-muted: #55555c;
+  --color-border: #dcdcd8;
+  --color-primary: #1a1a1a;
   --color-on-primary: #ffffff;
-  --color-link: #0b5cad;
-  --color-focus: #0b5cad;
-  --color-question-bg: #f3f4f6;
-  --color-question-text: var(--color-text);
-  --color-chip-bg: #f3f4f6;
+  --color-link: #1d4ed8;
+  --color-focus: #1d4ed8;
+  --color-chip-bg: #ffffff;
   --color-chip-text: var(--color-text);
-  --color-notice: #8a6100;
+  --color-hover-bg: #fff8d6;
+  --color-notice: #8a5a00;
   --color-notice-bg: #fff8e5;
   --color-error: #b42318;
-  --color-quote-bar: var(--color-border);
-  --color-area-trabajo: var(--color-text);
-  --color-area-consumo: var(--color-text);
-  --color-area-transito: var(--color-text);
+  --color-quote-bar: #e0a400;
+  --mark: #ffe066;
+  --mark-text: #1a1a1a;
 
-  --radius: 8px;
-  --radius-sm: 6px;
-  --radius-pill: 999px;
+  --radius: 6px;
+  --radius-sm: 4px;
+  --radius-pill: 6px;
   --border-width: 1px;
   --shadow: none;
   --shadow-form: 0 2px 12px rgb(0 0 0 / 0.06);
@@ -45,34 +44,36 @@
   --space-6: 32px;
   --space-7: 48px;
 
-  --text-sm: 0.875rem;
-  --text-base: 1rem;
-  --text-lg: 1.125rem;
-  --text-h1: clamp(1.75rem, 4vw, 2.5rem);
-  --line-height: 1.55;
+  --text-sm: 0.9375rem;
+  --text-base: 1.0625rem;
+  --text-lg: 1.25rem;
+  --text-h1: clamp(1.875rem, 5vw, 2.75rem);
+  --line-height: 1.6;
   --measure: 68ch;
   --container: 960px;
-  --heading-weight: 700;
+  --heading-weight: 600;
   --duration: 180ms;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-bg: #15171a;
-    --color-surface: #1c1f23;
-    --color-surface-2: #262a30;
-    --color-text: #e6e8eb;
-    --color-muted: #a1a9b3;
-    --color-border: #363c44;
-    --color-primary: #e6e8eb;
-    --color-on-primary: #15171a;
-    --color-link: #7cb4f0;
-    --color-focus: #7cb4f0;
-    --color-question-bg: #262a30;
-    --color-chip-bg: #262a30;
+    --color-bg: #161615;
+    --color-surface: #1d1d1b;
+    --color-surface-2: #262624;
+    --color-text: #ececea;
+    --color-muted: #a8a8a2;
+    --color-border: #3a3a36;
+    --color-primary: #ececea;
+    --color-on-primary: #161615;
+    --color-link: #8db4ff;
+    --color-focus: #8db4ff;
+    --color-hover-bg: #2e2a17;
     --color-notice: #e8c060;
     --color-notice-bg: #2a2412;
     --color-error: #ff8a80;
+    --color-quote-bar: #c99a1a;
+    --mark: #6b5a12;
+    --mark-text: #fdf6d8;
     --shadow-form: none;
   }
 }
@@ -185,7 +186,8 @@ button:disabled {
 }
 
 .brand {
-  font-family: var(--font-heading);
+  padding: 0 var(--space-1);
+  background: linear-gradient(transparent 55%, var(--mark) 55%);
   font-weight: var(--heading-weight);
   font-size: var(--text-lg);
   color: var(--color-text);
@@ -242,13 +244,9 @@ button:disabled {
   font-size: var(--text-base);
 }
 
-.badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2) var(--space-4);
-  list-style: none;
-  padding: 0;
+.sources-line {
   margin: 0;
+  max-width: var(--measure);
   color: var(--color-muted);
   font-size: var(--text-sm);
 }
@@ -266,19 +264,10 @@ button:disabled {
   flex-direction: column;
   background: var(--color-surface);
   border: var(--border-width) solid var(--color-border);
-  border-radius: var(--radius);
+  border-top: 3px solid var(--color-text);
+  border-radius: 0 0 var(--radius) var(--radius);
   box-shadow: var(--shadow);
   padding: var(--space-4);
-}
-
-.area-trabajo {
-  --area-color: var(--color-area-trabajo);
-}
-.area-consumo {
-  --area-color: var(--color-area-consumo);
-}
-.area-transito {
-  --area-color: var(--color-area-transito);
 }
 
 .area-head {
@@ -318,15 +307,16 @@ button:disabled {
   width: 100%;
   min-height: 44px;
   text-align: left;
-  background: var(--color-surface-2);
-  border: var(--border-width) solid transparent;
+  background: transparent;
+  border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius-sm);
   padding: var(--space-2) var(--space-3);
   transition: border-color var(--duration), background-color var(--duration);
 }
 
 .examples button:hover:not(:disabled) {
-  border-color: var(--area-color);
+  background: var(--color-hover-bg);
+  border-color: var(--color-text);
 }
 
 .area-law {
@@ -353,10 +343,18 @@ button:disabled {
   align-self: flex-end;
   max-width: 85%;
   margin: 0;
-  padding: var(--space-2) var(--space-4);
-  background: var(--color-question-bg);
-  color: var(--color-question-text);
-  border-radius: var(--radius);
+  font-weight: 600;
+  font-size: var(--text-lg);
+  text-align: right;
+}
+
+/* The highlight goes on the inline text so every wrapped line gets marked. */
+.question-bubble span {
+  padding: 0 2px;
+  color: var(--mark-text);
+  background: linear-gradient(transparent 58%, var(--mark) 58%);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
 }
 
 .card {
@@ -462,7 +460,11 @@ button:disabled {
 }
 
 .article-label {
-  font-weight: 700;
+  font-weight: 600;
+  padding: 0 var(--space-2);
+  border-radius: 3px;
+  background: var(--mark);
+  color: var(--mark-text);
 }
 
 .article-law {
@@ -484,7 +486,7 @@ button:disabled {
 blockquote {
   margin: var(--space-3) 0;
   padding-left: var(--space-4);
-  border-left: 3px solid var(--color-quote-bar);
+  border-left: 4px solid var(--color-quote-bar);
   font-family: var(--font-quote);
   max-width: var(--measure);
 }
@@ -537,14 +539,15 @@ blockquote p {
   text-align: left;
   background: var(--color-chip-bg);
   color: var(--color-chip-text);
-  border: var(--border-width) solid transparent;
+  border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius-pill);
   padding: var(--space-2) var(--space-4);
   transition: border-color var(--duration);
 }
 
 .chip:hover:not(:disabled) {
-  border-color: currentColor;
+  background: var(--color-hover-bg);
+  border-color: var(--color-text);
 }
 
 .referral {
