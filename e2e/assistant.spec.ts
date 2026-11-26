@@ -22,6 +22,10 @@ test("home shows the three areas with example questions", async ({ page }) => {
 });
 
 test("an example question gets an answer with the official article", async ({ page }) => {
+  const cspErrors: string[] = [];
+  page.on("console", (m) => {
+    if (m.type() === "error" && /Content Security Policy/i.test(m.text())) cspErrors.push(m.text());
+  });
   await page.goto("/");
   await page.getByRole("button", { name: "¿Cuántos días de vacaciones me corresponden?" }).click();
 
@@ -36,6 +40,7 @@ test("an example question gets an answer with the official article", async ({ pa
   // Follow-up questions start a new turn.
   await answer.getByRole("button", { name: "¿Cuánto dura el período de prueba?" }).click();
   await expect(page.getByRole("article", { name: "Respuesta" })).toHaveCount(2);
+  expect(cspErrors).toEqual([]);
 });
 
 test("off topic questions are declined", async ({ page }) => {
