@@ -1,3 +1,4 @@
+import { ExternalLink } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -28,12 +29,12 @@ export default async function LawPage({ params }: Params) {
         <Link href="/explorar">← Todas las leyes</Link>
       </p>
       <h1>
-        {law.name} <span className="muted">· Ley {law.number}</span>
+        {law.name} <span className="muted">(Ley {law.number})</span>
       </h1>
       <p className="lead small">
         {vigenciaText(law)}.{" "}
         <a href={law.pageUrl} target="_blank" rel="noopener noreferrer">
-          Ver en InfoLEG ↗
+          Ver en InfoLEG <ExternalLink aria-hidden size={14} />
         </a>
       </p>
       <LawBrowser articles={law.articles.filter((a) => !a.formal)} />

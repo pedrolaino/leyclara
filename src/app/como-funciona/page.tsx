@@ -1,3 +1,4 @@
+import { ExternalLink } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getLawSummaries } from "@/lib/laws-summary";
@@ -24,7 +25,7 @@ export default function HowItWorks() {
             </strong>{" "}
             — {vigenciaText(l)}.{" "}
             <a href={l.pageUrl} target="_blank" rel="noopener noreferrer">
-              InfoLEG ↗
+              InfoLEG <ExternalLink aria-hidden size={14} />
             </a>
           </li>
         ))}

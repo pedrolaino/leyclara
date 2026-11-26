@@ -21,6 +21,6 @@ export interface LawSummary {
 export function vigenciaText(law: Pick<LawSummary, "retrievedAt" | "lastAmendment">): string {
   const base = `Texto vigente según InfoLEG al ${formatDate(law.retrievedAt)}`;
   return law.lastAmendment
-    ? `${base} · última modificación incorporada: ${law.lastAmendment.text} (B.O. ${formatDate(law.lastAmendment.date)})`
+    ? `${base}. Última modificación incorporada: ${law.lastAmendment.text} (B.O. ${formatDate(law.lastAmendment.date)})`
     : base;
 }

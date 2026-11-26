@@ -1,5 +1,6 @@
 "use client";
 
+import { CalendarDays, ChevronRight, CircleAlert, ExternalLink, Info, SearchX } from "lucide-react";
 import type { ApiError, AskResult, CitedArticle, SourceInfo } from "@/lib/assistant/types";
 import { vigenciaText } from "@/lib/format";
 
@@ -45,7 +46,9 @@ export function ResultCard({ result, onAsk, question, disabled }: Props) {
     case "off_topic":
       return (
         <article className="card notice">
-          <p className="notice-title">Eso está fuera de lo que puedo responder</p>
+          <p className="notice-title">
+            <Info aria-hidden size={18} /> Eso está fuera de lo que puedo responder
+          </p>
           <p>{result.message}</p>
           <Suggestions items={result.suggestions} onPick={(q) => onAsk(q)} disabled={disabled} />
         </article>
@@ -54,7 +57,9 @@ export function ResultCard({ result, onAsk, question, disabled }: Props) {
     case "not_covered":
       return (
         <article className="card notice">
-          <p className="notice-title">Ese tema legal no está cubierto</p>
+          <p className="notice-title">
+            <Info aria-hidden size={18} /> Ese tema legal no está cubierto
+          </p>
           <p>{result.message}</p>
           <dl className="orientation">
             <dt>Dónde se regula</dt>
@@ -69,7 +74,9 @@ export function ResultCard({ result, onAsk, question, disabled }: Props) {
     case "not_found":
       return (
         <article className="card notice">
-          <p className="notice-title">No encontré un artículo que lo responda con seguridad</p>
+          <p className="notice-title">
+            <SearchX aria-hidden size={18} /> No encontré un artículo que lo responda con seguridad
+          </p>
           <p>{result.message}</p>
           <Suggestions items={result.suggestions} onPick={(q) => onAsk(q)} disabled={disabled} />
           {result.referral && <p className="referral">{result.referral}</p>}
@@ -79,7 +86,9 @@ export function ResultCard({ result, onAsk, question, disabled }: Props) {
     case "limit":
       return (
         <article className="card notice limit" role="status">
-          <p className="notice-title">Demo agotada por hoy</p>
+          <p className="notice-title">
+            <CircleAlert aria-hidden size={18} /> Demo agotada por hoy
+          </p>
           <p>{result.message}</p>
         </article>
       );
@@ -97,6 +106,7 @@ function ArticleDetails({ article, open }: { article: CitedArticle; open?: boole
   return (
     <details className="article" open={open}>
       <summary>
+        <ChevronRight className="chevron" aria-hidden size={16} />
         <span className="article-label">{article.label}</span>
         {article.title && <span className="article-title">{article.title}</span>}
         <span className="article-law">
@@ -118,7 +128,7 @@ function ArticleDetails({ article, open }: { article: CitedArticle; open?: boole
           </ul>
         )}
         <a href={article.url} target="_blank" rel="noopener noreferrer" className="source-link">
-          Ver texto completo en InfoLEG ↗
+          Ver texto completo en InfoLEG <ExternalLink aria-hidden size={14} />
         </a>
       </div>
     </details>
@@ -130,7 +140,7 @@ function Sources({ sources }: { sources: SourceInfo[] }) {
     <ul className="sources">
       {sources.map((s) => (
         <li key={s.lawId}>
-          {s.lawName}: {vigenciaText(s)}
+          <CalendarDays aria-hidden size={14} /> {s.lawName}: {vigenciaText(s)}
         </li>
       ))}
     </ul>

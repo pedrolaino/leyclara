@@ -18,9 +18,9 @@ export default function ExplorePage() {
           return (
             <Link key={law.id} href={`/explorar/${law.id}`} className={`law-card area-${area.id}`}>
               <span>
-                <strong>{law.name}</strong> · Ley {law.number}
+                <strong>{law.name}</strong> (Ley {law.number})
                 <span className="law-meta">
-                  {law.articleCount} artículos vigentes · {vigenciaText(law)}
+                  {law.articleCount} artículos vigentes. {vigenciaText(law)}.
                 </span>
               </span>
             </Link>

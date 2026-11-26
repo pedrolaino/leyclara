@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronRight } from "lucide-react";
 import { useMemo, useState } from "react";
 import { normalize } from "@/lib/retrieval/text";
 import type { Article } from "@/lib/types";
@@ -45,6 +46,7 @@ export function LawBrowser({ articles }: { articles: Article[] }) {
           {g.items.map((a) => (
             <details key={a.id} id={a.id} className={`article ${a.repealed ? "repealed" : ""}`} open={words.length > 0 && visible.length <= 3}>
               <summary>
+                <ChevronRight className="chevron" aria-hidden size={16} />
                 <span className="article-label">{a.label}</span>
                 {a.title && <span className="article-title">{a.title}</span>}
                 {a.repealed && <span className="tag">Derogado</span>}
