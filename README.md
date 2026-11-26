@@ -1,183 +1,129 @@
 # Ley Clara
 
-> **Preguntás en tus palabras qué derechos tenés en el trabajo, cuando comprás algo o en la calle, y te responde con el artículo exacto de la ley.**
+Ask in plain Spanish about your rights at work, as a consumer or on the road in Argentina, and get a short answer that cites the exact article of the law.
 
-La gente no piensa en leyes, piensa en problemas: *"me echaron"*, *"me vendieron algo fallado"*, *"me pararon en un control"*. Por eso el sitio se organiza por situaciones. El usuario no necesita saber qué ley aplica: el sistema busca en todas las leyes cargadas, encuentra los artículos relevantes, responde en 2 o 3 oraciones y muestra el texto oficial de cada artículo citado.
+![Home page with the three areas and example questions](docs/images/home.webp)
 
-| Área | Ley | Texto |
+Most people start from a problem, like "me despidieron", "me vendieron algo fallado" or "me pararon en un control", and have no idea which law covers it. Ley Clara is organized around those situations, so nobody has to know. It searches the three laws it has, finds the articles that fit, answers in two or three sentences and shows the official text of each article it cites.
+
+| Area | Law | Latest amendment included |
 |---|---|---|
-| Trabajo | Ley de Contrato de Trabajo 20.744 | Actualizado: incluye la Ley 27.802 (B.O. 6/3/2026) |
-| Compras | Ley de Defensa del Consumidor 24.240 | Actualizado: incluye la Ley 27.701 (B.O. 1/12/2022) |
-| Tránsito | Ley Nacional de Tránsito 24.449 | Actualizado: incluye el Decreto 627/2025 (B.O. 3/9/2025) |
+| Work | Ley de Contrato de Trabajo 20.744 | Ley 27.802 (Boletín Oficial, 6/3/2026) |
+| Shopping | Ley de Defensa del Consumidor 24.240 | Ley 27.701 (1/12/2022) |
+| Traffic | Ley Nacional de Tránsito 24.449 | Decreto 627/2025 (3/9/2025) |
 
-Textos actualizados de [InfoLEG](https://servicios.infoleg.gob.ar/), descargados el 26/11/2026.
+The texts are the updated versions published by [InfoLEG](https://servicios.infoleg.gob.ar/), downloaded on 26/11/2026.
 
----
+![An answer with the cited article open](docs/images/answer.webp)
 
-## Lo técnico en 30 segundos
+## How a question is answered
 
-- **RAG sobre textos legales oficiales**: el parser convierte el HTML de InfoLEG en una estructura (título › capítulo › artículo) con el epígrafe, las notas de modificación y la fecha de vigencia de cada ley.
-- **Citas verificables**: el modelo recibe solo los artículos recuperados y tiene que devolver sus ids. Las citas se validan contra esa lista y el texto que ve el usuario es siempre el oficial, nunca uno generado.
-- **Detección de fuera de alcance antes de gastar tokens**: temas legales no cubiertos (alquileres, familia, ART…), preguntas que no son del tema y preguntas sin fuente suficiente se resuelven **sin llamar al modelo**.
-- **Proveedor de IA intercambiable**: Gemini (plan gratis), cualquier API compatible con OpenAI (Groq, OpenRouter, Ollama) o un modo sin IA. Se elige con variables de entorno.
-- **Búsqueda híbrida**: BM25 con un glosario de lenguaje coloquial, más embeddings opcionales combinados por Reciprocal Rank Fusion. Sin embeddings, la app sigue funcionando.
-- **Evaluación**: 30 preguntas de prueba más 17 de un set separado (*holdout*), con métricas de búsqueda, de router y de citas. Corre en CI.
-- **Protección contra abuso**: límite por IP y global por día, captcha invisible, caché, topes de largo y un mensaje de "demo agotada".
+1. If the question is about a legal topic that isn't loaded (rent, divorce, pensions, work accidents), the site says where that topic is regulated and who to ask, without searching or calling the model.
+2. Otherwise it searches all three laws at once. Everyday words are mapped to the law's words first, so "me echaron" also searches for "despido" and "indemnización". Ranking combines BM25 and pgvector similarity with reciprocal rank fusion.
+3. If no article clears the relevance threshold, the model is not called. The user gets "no encontré un artículo que responda eso" with a few questions that do work.
+4. If there are matching articles, Gemini gets those articles and nothing else, and has to return JSON with the answer and the ids it cited.
+5. Citations are checked against the articles that were sent. An answer that cites anything else is dropped. The article text shown on screen comes from the parsed law. The model never writes it.
 
-Stack: Next.js 16 (App Router) · TypeScript · Vitest · sin base de datos (el índice es un JSON) · Upstash Redis y Cloudflare Turnstile opcionales.
+![A question about rent, which isn't covered](docs/images/not-covered.webp)
 
----
+## Design decisions
 
-## Cómo responde una pregunta
+### Why only three laws
 
-```
-pregunta
-   │
-   ├─► ¿tema legal que no cubrimos?  (alquileres, divorcio, ART, casas particulares…)
-   │        └─ sí ─► "Ese tema no está cubierto" + dónde se regula + a quién consultar     (sin IA)
-   │
-   ├─► búsqueda en las 3 leyes a la vez
-   │      "me echaron" → +despido +indemnización   (glosario coloquial → términos de la ley)
-   │      BM25 por artículo (+ embeddings si hay índice, fusión RRF)
-   │
-   ├─► ¿algún artículo supera el umbral de relevancia?
-   │        └─ no ─► "fuera de tema" o "no encontré un artículo que lo responda"           (sin IA)
-   │
-   ├─► modelo con SOLO esos artículos  →  JSON {status, answer, citations[], follow_ups[]}
-   │
-   └─► validación: citas ⊂ artículos dados; si no hay citas válidas → "no encontré"
-```
+Each one covers a common everyday problem and has one national text. A small scope made it possible to test the parser on every article, build a vocabulary for each area and say clearly what isn't covered. Rent was left out on purpose: Ley 27.551 was repealed at the end of 2023 and rentals now fall under the Código Civil y Comercial, which isn't loaded.
 
-Cada respuesta muestra:
-1. La respuesta corta, en lenguaje simple.
-2. Los artículos citados, desplegables, con el texto oficial, su ubicación en la ley y las notas de modificación.
-3. La vigencia: *"Texto vigente según InfoLEG al 26/11/2026 · última modificación incorporada: Ley Nº 27.802 (B.O. 6/3/2026)"*.
-4. Dos o tres preguntas de seguimiento. Al tocarlas, la pregunta anterior se usa como contexto.
-5. Una línea chica que deriva al organismo o profesional que corresponde según el área.
+### Declining when there is no source
 
----
+A legal answer that sounds right and is wrong can hurt someone, so the site would rather say it found nothing. The relevance check runs before the model, the prompt lets the model answer `not_found`, and the citation check runs after it.
 
-## Decisiones de diseño
+### Topics the law excludes
 
-**Por qué solo tres áreas.** Son las situaciones legales más frecuentes en la vida cotidiana y cada una tiene una ley nacional central. Un alcance chico permite cuidar la calidad (parser, glosario, evaluación) y decir con precisión qué *no* se cubre. Alquileres quedó afuera a propósito: la Ley 27.551 fue derogada a fines de 2023 y el tema pasó al Código Civil y Comercial, que no está cargado. Para esos casos el sistema orienta, no responde.
+"Soy empleada doméstica, ¿cuántas vacaciones tengo?" looks like a labor question, but article 2 of the Ley de Contrato de Trabajo excludes domestic work, which has its own law (26.844). Topics like that are rejected even when the question sounds covered.
 
-**Por qué no responde si no hay fuente.** En temas legales, una respuesta inventada pero convincente hace más daño que un "no sé". La regla se aplica en tres capas:
-1. Si la búsqueda no encuentra artículos relevantes, no se llama al modelo.
-2. El prompt le permite al modelo responder `not_found` y le pide que no use conocimiento propio.
-3. Se descarta toda respuesta que no cite al menos un artículo de los que se le pasaron.
+### What Postgres is for
 
-**Por qué el glosario coloquial.** Los usuarios dicen "me echaron", "en negro", "aguinaldo", "carnet", "VTV". La ley dice "despido", "relación no registrada", "sueldo anual complementario", "licencia de conducir", "revisión técnica obligatoria". El glosario ([`src/lib/scope/lexicon.ts`](src/lib/scope/lexicon.ts)) agrega esos términos a la búsqueda y además señala de qué área es la pregunta, lo que el router usa para distinguir "fuera de tema" de "tema cubierto sin respuesta clara".
+The law text ships with the app as JSON produced by the parser, so pages and BM25 don't depend on the database. Postgres holds what has to be shared or computed once:
 
-**Temas excluidos aunque "suenen" cubiertos.** *"Soy empleada doméstica, ¿cuántas vacaciones tengo?"* parece una pregunta laboral, pero el artículo 2 de la LCT excluye ese trabajo, que tiene su propio régimen (Ley 26.844). Responder con el artículo 150 sería un error. Estos temas están marcados como `exclusive` y se rechazan siempre, con la orientación correcta.
+- `chunk_embeddings`: one vector per chunk and embedding model, plus a hash of the chunk text. Search filters by model and ignores vectors whose hash doesn't match the current text, so vectors from two models or from an old version of a law are never compared.
+- `kv`: the answer cache and the rate limit counters, shared by every serverless instance.
 
-**Costos.**
-- Modelo: plan gratuito de Gemini, detrás de una interfaz ([`src/lib/ai/types.ts`](src/lib/ai/types.ts)). Si el plan cambia, se pasa a Groq u OpenRouter (también gratis) o a un modelo local con Ollama, sin tocar código.
-- Embeddings: se calculan **una sola vez** al cargar los textos (`npm run index:build`). En cada consulta solo se embebe la pregunta. El índice guarda un hash del corpus: si se vuelve a parsear una ley, la app ignora el índice viejo en vez de mezclar versiones.
-- Sin base de datos: unos 450 artículos entran en memoria. La búsqueda vectorial es un producto punto sobre algunos cientos de vectores.
-- Las preguntas rechazadas por el router y las respuestas en caché no consumen cupo del modelo.
+The same code runs against a local Postgres in Docker and against Neon in production. Only `DATABASE_URL` changes. Without it the app still works, with lexical search and limits kept in memory.
 
-**Abuso.**
+### Cost
 
-| Medida | Dónde |
-|---|---|
-| Límite por IP por día (IP hasheada con sal, nunca se guarda en claro) | [`src/lib/guard/limits.ts`](src/lib/guard/limits.ts) |
-| Cupo global diario de llamadas al modelo | ídem |
-| Si el proveedor responde 429 → "demo agotada por hoy", sin volver a llamarlo hasta el día siguiente | [`src/lib/assistant/service.ts`](src/lib/assistant/service.ts) |
-| Captcha invisible (Cloudflare Turnstile, gratis) | [`src/lib/guard/turnstile.ts`](src/lib/guard/turnstile.ts) |
-| Largo máximo de pregunta (300) y de respuesta (tokens + recorte por oración) | `.env.example` |
-| Caché de preguntas repetidas (7 días): las de ejemplo nunca se agotan | `service.ts` |
-| Prompt injection: la pregunta va delimitada, el modelo solo puede devolver el JSON del schema y las citas se validan | [`src/lib/assistant/prompt.ts`](src/lib/assistant/prompt.ts) |
+Everything runs on free tiers. Embeddings are computed once by `npm run ingest`, which only embeds chunks that are new or changed. Each question costs one query embedding and at most one model call. Rejected questions and cached answers cost nothing. The LLM sits behind an interface ([src/lib/ai/types.ts](src/lib/ai/types.ts)), so switching to Groq, OpenRouter or a local Ollama model is a matter of environment variables. A mock provider quotes the best article and is what tests and CI use.
 
-En serverless, los contadores y la caché usan Upstash Redis (plan gratis). Sin Upstash, se usa memoria.
+### Abuse
 
-**Aviso legal discreto.** Hay una línea fija en el pie del sitio y una línea chica debajo de cada respuesta que deriva según el área (abogado laboralista o sindicato, oficina de Defensa del Consumidor, autoridad que labró el acta). No hay carteles ni pantallas de aceptación.
+A daily limit per IP (stored as a salted hash), a global daily cap on model calls, an invisible Cloudflare Turnstile check, a 300 character limit on questions, and a token limit on answers. If Gemini returns 429, the site shows "demo agotada por hoy" and stops calling it until the next day. Pages are served with a nonce-based Content-Security-Policy.
 
----
-
-## Evaluación
+## Evaluation
 
 ```bash
-npm run eval                                # proveedor configurado (Gemini si hay key)
-LLM_PROVIDER=mock npm run eval              # sin IA: búsqueda + router, gratis y determinístico
-npm run eval -- --set holdout --verbose     # set separado
+LLM_PROVIDER=mock npm run eval                         # search and routing, no model
+npm run eval -- --set holdout --verbose                # questions never used for tuning
 ```
 
-- [`eval/questions.json`](eval/questions.json): 30 preguntas. Hay 20 con su artículo esperado (8 de trabajo, 6 de consumo y 6 de tránsito), 3 fuera de tema, 4 de temas legales no cubiertos y 3 "cubiertas pero sin respuesta en la ley". Están redactadas distinto de las preguntas de ejemplo de la home.
-- [`eval/holdout.json`](eval/holdout.json): 17 preguntas escritas **después** de ajustar el glosario y que no se usaron para ajustar nada. Miden cuánto generaliza.
+[`eval/questions.json`](eval/questions.json) has 30 questions: 20 with an expected article, 3 off topic, 4 on uncovered legal topics and 3 that are covered but have no clear answer in the law. They are worded differently from the examples on the home page. [`eval/holdout.json`](eval/holdout.json) has 17 more, written after the everyday-language mapping was tuned and never used to tune it.
 
-### Resultados actuales: búsqueda léxica, sin modelo (`mock`)
+Current results with lexical search and the mock provider:
 
-| | Set principal | Holdout |
+| | Main set | Holdout |
 |---|---|---|
-| Artículo esperado en el top-1 | 50% (10/20) | 62% (8/13) |
-| Artículo esperado en el top-5 (lo que recibe el modelo) | **95% (19/20)** | **92% (12/13)** |
-| MRR | 0.725 | 0.760 |
-| Router: tipo de respuesta correcto* | **100% (27/27)** | 81% (13/16) |
-| Respuestas indebidas (respondió algo que debía rechazar) | 0 | 2 |
+| Expected article in top 5 (what the model receives) | 95% (19/20) | 92% (12/13) |
+| Expected article first | 50% (10/20) | 62% (8/13) |
+| Right kind of response | 100% (27/27) | 81% (13/16) |
+| Answered when it should have declined | 0 | 2 |
 
-\* Sin modelo se omiten las preguntas que solo el modelo puede rechazar ("cubierto pero sin respuesta clara").
+Three holdout questions end up in the wrong place. "¿En cuánto tiempo me tienen que dar los certificados?" is rejected as off topic because nothing in it points to work, even though the right article ranks first. Questions about inheritance and retirement trigger the uncovered-topic rules, but words like "falleció" and "edad" also look like work or traffic, so they reach the model. Without a model they get a wrong answer; with Gemini they're expected to come back as `not_found`. Results with Gemini and embeddings are still to be added.
 
-Lo que muestra el holdout, sin maquillar:
-- *"Mi abuela falleció, ¿cómo se reparte la herencia?"* y *"¿A qué edad me puedo jubilar?"* se detectan como temas no cubiertos. Pero palabras como "falleció" o "edad" también activan señales de trabajo y tránsito, así que la pregunta sigue de largo hasta el modelo. Sin modelo (mock) se responden mal. Con modelo se espera que respondan `not_found`, y en ese caso el sistema muestra la orientación del tema no cubierto.
-- *"¿en cuánto tiempo me tienen que dar los certificados?"* se rechaza como fuera de tema porque no tiene ninguna palabra que el glosario asocie a trabajo, aunque el artículo correcto (LCT 80) queda primero en la búsqueda.
+## Running it locally
 
-Los reportes completos están en [`eval/results/`](eval/results/). Para comparar modelos, se corre la evaluación con cada configuración y queda un reporte por combinación de proveedor, modelo y búsqueda (léxica o híbrida).
-
-> **Pendiente:** correr la evaluación con Gemini y con embeddings (`gemini-embedding-001`) y agregar la comparación. Hace falta una API key, que no estuvo disponible en el entorno donde se desarrolló. Con embeddings también hay que calibrar `minCosine` en [`src/lib/assistant/answer.ts`](src/lib/assistant/answer.ts).
-
----
-
-## Correrlo localmente
+You need Node.js 20 or newer. Docker is optional, for the database.
 
 ```bash
 npm install
-cp .env.example .env.local   # completar GEMINI_API_KEY (gratis en https://aistudio.google.com/apikey)
-npm run index:build          # opcional: embeddings (una sola vez)
+cp .env.example .env.local        # add GEMINI_API_KEY, free at aistudio.google.com
+docker compose up -d              # local Postgres with pgvector
+npm run db:setup
+npm run ingest                    # parses the laws and stores embeddings
 npm run dev
 ```
 
-Sin API key, la app arranca en modo sin IA: responde con la cita textual del artículo más relevante y lo aclara en pantalla.
+Without a key the site answers by quoting the best article and says so on the page. Without Docker, leave `DATABASE_URL` empty.
 
-Actualizar los textos legales:
-
-```bash
-npm run laws:fetch    # descarga el texto actualizado de InfoLEG → data/raw/
-npm run laws:parse    # → data/laws/*.json (estructura, artículos, vigencia)
-npm run index:build   # recalcula embeddings
-npm run eval          # verifica que nada se haya roto
-```
-
-Agregar una ley (por ejemplo la Constitución Nacional) es sumar una entrada en [`src/config/laws.ts`](src/config/laws.ts) y repetir esos pasos.
-
-**Deploy:** pensado para Vercel (plan gratis). Variables mínimas: `GEMINI_API_KEY`. Recomendadas para producción: `UPSTASH_REDIS_REST_URL/TOKEN`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` y `IP_HASH_SALT`.
+To refresh the laws from InfoLEG, run `npm run ingest -- --fetch`. Adding a law, such as the Constitution, means adding it to [src/config/laws.ts](src/config/laws.ts) and running the same command.
 
 ## Tests
 
 ```bash
-npm test          # 37 tests: parser, búsqueda, router, validación de citas, límites, caché
-npm run typecheck
+npm test                                   # parser, search, routing, limits, cache
+TEST_DATABASE_URL=postgres://... npm test  # also runs the Postgres tests
+npm run e2e                                # Playwright, desktop and mobile
+npm run lint && npm run typecheck
 ```
 
-## Estructura
+CI runs all of the above against a pgvector service, checks that the committed law JSON matches the parser output, and runs the evaluation with the mock provider.
+
+## Project layout
 
 ```
-src/
-  config/        laws.ts (leyes, áreas, ejemplos, derivaciones) · site.ts (nombre, límites)
-  lib/ingest/    HTML de InfoLEG → artículos (parser + notas de modificación + vigencia)
-  lib/retrieval/ normalización y stemming en español, BM25, embeddings, búsqueda híbrida
-  lib/scope/     glosario coloquial, señales de área, temas no cubiertos
-  lib/ai/        interfaz + Gemini, compatible con OpenAI y mock
-  lib/assistant/ prompt, pipeline/router, servicio (validación, captcha, caché, límites)
-  lib/guard/     límites de uso, KV (memoria / Upstash), Turnstile
-  app/           inicio (chat), /explorar (leer y buscar en las leyes), /como-funciona, /api/ask
-scripts/         fetch-laws, parse-laws, build-index
-data/            raw/ (HTML original de InfoLEG) · laws/ (JSON parseado) · index/ (embeddings)
-eval/            preguntas, holdout, runner y resultados
+src/config/        laws, areas, example questions, site name and limits
+src/lib/ingest/    InfoLEG HTML to articles, with amendments and dates
+src/lib/retrieval/ Spanish text processing, BM25, vector search, hybrid ranking
+src/lib/scope/     everyday words, area hints, uncovered topics
+src/lib/ai/        LLM and embedding providers behind one interface
+src/lib/assistant/ prompt, answer pipeline, request handling
+src/lib/db/        Postgres client, schema, embeddings
+src/lib/guard/     rate limits, cache store, Turnstile
+src/app/           pages and the /api/ask route
+data/              InfoLEG HTML as downloaded, and the parsed laws
+eval/              test questions, runner and reports
+e2e/               Playwright tests
 ```
 
-## Límites conocidos
+Code and comments are in English. Terms that come from Argentine law (`trabajo`, `título`, `Boletín Oficial`, `vigencia`) stay in Spanish, and so does everything users see.
 
-- Es información general y no reemplaza a un abogado. El sistema lo dice y deriva.
-- Los convenios colectivos pueden dar más derechos que la LCT, y en tránsito cada provincia o municipio puede tener normas propias. Ninguno de los dos está cargado.
-- El texto de InfoLEG puede tardar en reflejar una modificación reciente. Por eso se muestra la fecha de descarga y la última modificación incorporada.
-- La búsqueda léxica no entiende sinónimos que no estén en el glosario. Para eso están los embeddings.
+## License
+
+[MIT](LICENSE)
