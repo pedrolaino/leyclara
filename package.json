@@ -1,0 +1,35 @@
+{
+  "name": "ley-clara",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Asistente que responde preguntas sobre derechos laborales, de consumo y de tránsito en Argentina citando el artículo exacto de la ley.",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "laws:fetch": "tsx scripts/fetch-laws.ts",
+    "laws:parse": "tsx scripts/parse-laws.ts",
+    "index:build": "tsx scripts/build-index.ts",
+    "eval": "tsx eval/run.ts"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "next": "^16.4.6",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.7",
+    "@types/react": "^19.3.3",
+    "@types/react-dom": "^19.3.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vitest": "^5.1.2"
+  }
+}

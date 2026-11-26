@@ -1,0 +1,99 @@
+/**
+ * Google Gemini (API de Google AI Studio, tiene plan gratuito). REST directo, sin SDK.
+ * Docs: https://ai.google.dev/api
+ */
+import {
+  type ChatProvider,
+  type EmbeddingKind,
+  type EmbeddingProvider,
+  type JsonRequest,
+  type Schema,
+  parseJsonLoose,
+  postJson,
+  ProviderError,
+} from "./types";
+
+const BASE = "https://generativelanguage.googleapis.com/v1beta";
+
+/** Gemini usa el formato de schema de OpenAPI con tipos en mayúscula. */
+function toGeminiSchema(s: Schema): Record<string, unknown> {
+  switch (s.type) {
+    case "string":
+      return { type: "STRING", ...(s.enum ? { enum: s.enum } : {}) };
+    case "array":
+      return { type: "ARRAY", items: toGeminiSchema(s.items) };
+    case "object":
+      return {
+        type: "OBJECT",
+        properties: Object.fromEntries(Object.entries(s.properties).map(([k, v]) => [k, toGeminiSchema(v)])),
+        required: s.required,
+        propertyOrdering: Object.keys(s.properties),
+      };
+  }
+}
+
+export class GeminiChat implements ChatProvider {
+  readonly name = "gemini";
+  constructor(
+    private apiKey: string,
+    readonly model: string,
+    private thinkingBudget?: number,
+  ) {}
+
+  async generateJson(req: JsonRequest): Promise<unknown> {
+    const generationConfig: Record<string, unknown> = {
+      temperature: req.temperature ?? 0.1,
+      maxOutputTokens: req.maxOutputTokens,
+      responseMimeType: "application/json",
+      responseSchema: toGeminiSchema(req.schema),
+    };
+    // En los modelos "thinking" el razonamiento consume tokens de salida; para este uso no hace falta.
+    if (this.thinkingBudget !== undefined) generationConfig.thinkingConfig = { thinkingBudget: this.thinkingBudget };
+
+    const data = await postJson(
+      `${BASE}/models/${this.model}:generateContent`,
+      { "x-goog-api-key": this.apiKey },
+      {
+        systemInstruction: { parts: [{ text: req.system }] },
+        contents: [{ role: "user", parts: [{ text: req.user }] }],
+        generationConfig,
+      },
+    );
+    const text: string | undefined = data?.candidates?.[0]?.content?.parts
+      ?.map((p: { text?: string }) => p.text ?? "")
+      .join("");
+    if (!text) throw new ProviderError(`Respuesta vacía (${data?.candidates?.[0]?.finishReason ?? "sin candidatos"})`);
+    return parseJsonLoose(text);
+  }
+}
+
+export class GeminiEmbeddings implements EmbeddingProvider {
+  readonly name = "gemini";
+  constructor(
+    private apiKey: string,
+    readonly model: string,
+    readonly dimensions: number,
+  ) {}
+
+  async embed(texts: string[], kind: EmbeddingKind): Promise<number[][]> {
+    const out: number[][] = [];
+    for (let i = 0; i < texts.length; i += 100) {
+      const batch = texts.slice(i, i + 100);
+      const data = await postJson(
+        `${BASE}/models/${this.model}:batchEmbedContents`,
+        { "x-goog-api-key": this.apiKey },
+        {
+          requests: batch.map((text) => ({
+            model: `models/${this.model}`,
+            content: { parts: [{ text }] },
+            taskType: kind === "document" ? "RETRIEVAL_DOCUMENT" : "RETRIEVAL_QUERY",
+            outputDimensionality: this.dimensions,
+          })),
+        },
+        60_000,
+      );
+      out.push(...data.embeddings.map((e: { values: number[] }) => e.values));
+    }
+    return out;
+  }
+}

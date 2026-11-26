@@ -1,0 +1,19 @@
+[
+  { "id": "h01", "question": "Mi empleador me debe dos meses de sueldo, ¿puedo considerarme despedido?", "expected": { "kind": "answer", "articles": ["lct-242", "lct-246"] } },
+  { "id": "h02", "question": "¿Cuántos días de licencia me dan por el nacimiento de mi hijo?", "expected": { "kind": "answer", "articles": ["lct-158"] } },
+  { "id": "h03", "question": "¿Tengo derecho a que me den un recibo cada vez que me pagan?", "expected": { "kind": "answer", "articles": ["lct-138", "lct-140"] } },
+  { "id": "h04", "question": "Si me enfermo y tengo hijos, ¿cuántos meses me siguen pagando?", "expected": { "kind": "answer", "articles": ["lct-208"] } },
+  { "id": "h05", "question": "Me fui de la empresa, ¿en cuánto tiempo me tienen que dar los certificados?", "expected": { "kind": "answer", "articles": ["lct-80"] } },
+  { "id": "h06", "question": "El negocio donde compré el celular no me quiere cumplir la garantía y me manda al fabricante", "expected": { "kind": "answer", "articles": ["ldc-13", "ldc-11"] } },
+  { "id": "h07", "question": "Me llegó una factura de gas con un consumo altísimo comparado con otros años", "expected": { "kind": "answer", "articles": ["ldc-31"] } },
+  { "id": "h08", "question": "¿Me pueden cobrar un mes extra por darme de baja del gimnasio?", "expected": { "kind": "answer", "articles": ["ldc-10quater"] } },
+  { "id": "h09", "question": "¿Qué es el daño punitivo?", "expected": { "kind": "answer", "articles": ["ldc-52bis"] } },
+  { "id": "h10", "question": "¿Es obligatorio usar casco en la moto?", "expected": { "kind": "answer", "articles": ["lnt-40"] } },
+  { "id": "h11", "question": "¿Puedo usar el celular mientras manejo?", "expected": { "kind": "answer", "articles": ["lnt-48"] } },
+  { "id": "h12", "question": "¿Qué pasa si no pago una multa de tránsito? ¿Vence?", "expected": { "kind": "answer", "articles": ["lnt-85", "lnt-89"] } },
+  { "id": "h13", "question": "¿Hasta qué velocidad puedo ir con el auto en la ruta?", "expected": { "kind": "answer", "articles": ["lnt-51"] } },
+  { "id": "h14", "question": "¿Me recomendás una serie para ver esta noche?", "expected": { "kind": "off_topic" } },
+  { "id": "h15", "question": "Mi abuela falleció, ¿cómo se reparte la herencia?", "expected": { "kind": "not_covered", "topic": "sucesiones" } },
+  { "id": "h16", "question": "¿A qué edad me puedo jubilar?", "expected": { "kind": "not_covered", "topic": "jubilaciones" } },
+  { "id": "h17", "question": "¿Cuánto es hoy el salario mínimo vital y móvil?", "expected": { "kind": "not_found" }, "needsModel": true }
+]

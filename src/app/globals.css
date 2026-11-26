@@ -1,0 +1,265 @@
+/*
+ * Estilos base, deliberadamente neutros: solo estructura y legibilidad.
+ * El diseño visual (colores, tipografía, logo) se define en una etapa aparte.
+ * Los nombres de clase del markup quedan como ganchos para ese diseño.
+ */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+  background: #fff;
+  color: #222;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #161616;
+    color: #ddd;
+  }
+}
+
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.muted,
+.area-subtitle,
+.area-law,
+.article-law,
+.article-path,
+.article-notes,
+.sources,
+.referral,
+.meta-note,
+.law-meta,
+.counter,
+.site-footer {
+  opacity: 0.75;
+  font-size: 0.9em;
+}
+
+/* Header / footer */
+.header-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+}
+
+.brand {
+  font-weight: bold;
+  color: inherit;
+  text-decoration: none;
+}
+
+.site-header nav {
+  display: flex;
+  gap: 16px;
+}
+
+.site-header,
+.site-footer {
+  border-color: #8884;
+  border-style: solid;
+  border-width: 0;
+}
+
+.site-header {
+  border-bottom-width: 1px;
+}
+
+.site-footer {
+  border-top-width: 1px;
+  margin-top: 40px;
+  padding: 16px 0;
+}
+
+/* Inicio */
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  padding-left: 18px;
+}
+
+.areas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin: 16px 0;
+}
+
+.area-card,
+.card,
+.article,
+.law-card {
+  border: 1px solid #8886;
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.area-head h2 {
+  margin: 0;
+  font-size: 1.1em;
+}
+
+.examples {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.examples button,
+.chip {
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+/* Conversación */
+.conversation {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 16px 0;
+}
+
+.question-bubble {
+  font-weight: bold;
+  margin: 0 0 6px;
+}
+
+.section-label {
+  font-size: 0.85em;
+  margin: 14px 0 6px;
+}
+
+.article {
+  margin-bottom: 6px;
+  padding: 0;
+}
+
+.article summary {
+  cursor: pointer;
+  padding: 8px 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+
+.article-label {
+  font-weight: bold;
+}
+
+.article-body {
+  padding: 0 12px 10px;
+}
+
+blockquote {
+  margin: 8px 0;
+  padding-left: 12px;
+  border-left: 3px solid #8886;
+}
+
+.sources {
+  list-style: none;
+  padding: 0;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  width: auto;
+}
+
+.orientation dt {
+  font-weight: bold;
+}
+
+.orientation dd {
+  margin: 0 0 8px;
+}
+
+.article.repealed .article-title {
+  text-decoration: line-through;
+}
+
+/* Formulario */
+.ask-form {
+  margin-top: 16px;
+}
+
+.started .ask-form {
+  position: sticky;
+  bottom: 0;
+  background: inherit;
+  padding: 8px 0;
+}
+
+.ask-form textarea,
+.law-search {
+  width: 100%;
+  font: inherit;
+  padding: 8px;
+}
+
+.form-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.counter {
+  margin-right: auto;
+}
+
+.turnstile:empty {
+  display: none;
+}
+
+/* Explorar */
+.law-list {
+  display: grid;
+  gap: 10px;
+}
+
+.law-card {
+  display: block;
+  color: inherit;
+}
+
+.law-meta {
+  display: block;
+}
+
+@media (max-width: 560px) {
+  .hide-mobile {
+    display: none;
+  }
+}

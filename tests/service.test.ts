@@ -1,0 +1,85 @@
+import { beforeEach, describe, expect, it } from "vitest";
+import { MockChat } from "@/lib/ai/mock";
+import { type ChatProvider, QuotaExceededError } from "@/lib/ai/types";
+import { handleAsk, MESSAGES, setServices } from "@/lib/assistant/service";
+import { getEnv } from "@/lib/env";
+import { UsageLimiter } from "@/lib/guard/limits";
+import { MemoryKV } from "@/lib/guard/store";
+
+const headers = (ip = "1.2.3.4") => new Headers({ "x-forwarded-for": ip });
+
+function setup(chat: ChatProvider = new MockChat(), limits: { perIp?: number; global?: number } = {}) {
+  const env = getEnv({ LLM_PROVIDER: "mock", EMBEDDING_PROVIDER: "none" } as unknown as NodeJS.ProcessEnv);
+  const kv = new MemoryKV();
+  setServices({ env, kv, chat, limiter: new UsageLimiter(kv, limits.perIp ?? 3, limits.global ?? 100) });
+  return { kv };
+}
+
+describe("handleAsk", () => {
+  beforeEach(() => setup());
+
+  it("valida largo mínimo y máximo", async () => {
+    expect((await handleAsk({ question: "" }, headers())).status).toBe(400);
+    expect((await handleAsk({ question: "hola" }, headers())).body).toMatchObject({ message: MESSAGES.tooShort });
+    const long = "a".repeat(301);
+    expect((await handleAsk({ question: long }, headers())).body).toMatchObject({ message: MESSAGES.tooLong(300) });
+  });
+
+  it("responde y guarda en caché: la repetición no gasta cupo", async () => {
+    const q = { question: "¿Cuál es la velocidad máxima en una autopista?" };
+    const first = await handleAsk(q, headers());
+    expect(first.body.kind).toBe("answer");
+    for (let i = 0; i < 5; i++) {
+      const again = await handleAsk(q, headers());
+      expect(again.status).toBe(200);
+      if (again.body.kind === "answer") expect(again.body.meta.cached).toBe(true);
+    }
+  });
+
+  it("límite diario por IP", async () => {
+    const qs = ["¿Qué documentos tengo que llevar para manejar?", "¿Puedo manejar si tomé una cerveza?", "¿Cuánto dura el período de prueba?", "¿Cuándo me tienen que pagar el aguinaldo?"];
+    const statuses = [];
+    for (const question of qs) statuses.push((await handleAsk({ question }, headers("9.9.9.9"))).status);
+    expect(statuses).toEqual([200, 200, 200, 429]);
+    // Otra IP sigue pudiendo preguntar.
+    expect((await handleAsk({ question: qs[3] }, headers("8.8.8.8"))).status).toBe(200);
+  });
+
+  it("si el proveedor agota el cupo, muestra 'demo agotada' y no vuelve a llamarlo", async () => {
+    let calls = 0;
+    const chat: ChatProvider = {
+      name: "fake",
+      model: "x",
+      async generateJson() {
+        calls++;
+        throw new QuotaExceededError();
+      },
+    };
+    setup(chat, { perIp: 50 });
+    const r1 = await handleAsk({ question: "¿Cuántos días de vacaciones me corresponden?" }, headers());
+    expect(r1).toMatchObject({ status: 429, body: { kind: "limit", message: MESSAGES.exhausted } });
+    const r2 = await handleAsk({ question: "¿Cuánto dura el período de prueba?" }, headers());
+    expect(r2.status).toBe(429);
+    expect(calls).toBe(1);
+  });
+
+  it("cupo global de llamadas al modelo", async () => {
+    const chat: ChatProvider = {
+      name: "fake",
+      model: "x",
+      async generateJson() {
+        return { status: "answered", answer: "Respuesta.", citations: [], follow_ups: [] };
+      },
+    };
+    setup(chat, { perIp: 50, global: 1 });
+    await handleAsk({ question: "¿Cuántos días de vacaciones me corresponden?" }, headers());
+    const r = await handleAsk({ question: "¿Cuánto dura el período de prueba?" }, headers());
+    expect(r.body).toMatchObject({ kind: "limit" });
+  });
+
+  it("las preguntas que se rechazan sin modelo no consumen cupo global", async () => {
+    setup(new MockChat(), { perIp: 50, global: 0 });
+    const r = await handleAsk({ question: "¿Quién ganó el mundial de fútbol?" }, headers());
+    expect(r.body.kind).toBe("off_topic");
+  });
+});
