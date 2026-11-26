@@ -22,12 +22,13 @@ interface SyncOptions {
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 // Free tiers limit requests per minute, so on a quota error we wait a minute and try again.
+// The daily limit doesn't come back for hours, so then we stop.
 async function embedWithRetry(provider: EmbeddingProvider, texts: string[], wait: (ms: number) => Promise<void>) {
   for (let attempt = 1; ; attempt++) {
     try {
       return await provider.embed(texts, "document");
     } catch (e) {
-      if (!(e instanceof QuotaExceededError) || attempt === 5) throw e;
+      if (!(e instanceof QuotaExceededError) || /PerDay/.test(e.message) || attempt === 5) throw e;
       console.log("  quota reached, waiting a minute…");
       await wait(60_000);
     }
