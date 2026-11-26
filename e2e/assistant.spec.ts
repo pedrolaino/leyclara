@@ -43,6 +43,15 @@ test("an example question gets an answer with the official article", async ({ pa
   expect(cspErrors).toEqual([]);
 });
 
+test("the logo goes back to the start of the home page", async ({ page }) => {
+  await page.goto("/");
+  await ask(page, "¿Cuál es la velocidad máxima en una autopista?");
+  await expect(page.getByRole("article", { name: "Respuesta" })).toBeVisible();
+  await page.getByRole("link", { name: "Ley Clara" }).click();
+  await expect(page.getByRole("heading", { name: "Trabajo" })).toBeVisible();
+  await expect(page.getByRole("article", { name: "Respuesta" })).toHaveCount(0);
+});
+
 test("off topic questions are declined", async ({ page }) => {
   await page.goto("/");
   await ask(page, "¿Quién ganó el último mundial de fútbol?");
