@@ -1,4 +1,5 @@
-// In memory works for dev and a single server. Serverless needs Upstash so instances share counts.
+// Memory is enough for dev and tests. In production every instance shares the Postgres table.
+import type { Sql } from "@/lib/db/client";
 export interface KV {
   get(key: string): Promise<string | null>;
   set(key: string, value: string, ttlSeconds: number): Promise<void>;
@@ -35,34 +36,30 @@ export class MemoryKV implements KV {
   }
 }
 
-export class UpstashKV implements KV {
-  constructor(
-    private url: string,
-    private token: string,
-  ) {}
-
-  private async pipeline(commands: (string | number)[][]): Promise<{ result: unknown }[]> {
-    const res = await fetch(`${this.url.replace(/\/$/, "")}/pipeline`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${this.token}`, "Content-Type": "application/json" },
-      body: JSON.stringify(commands),
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!res.ok) throw new Error(`Upstash HTTP ${res.status}`);
-    return res.json();
-  }
+export class PostgresKV implements KV {
+  constructor(private sql: Sql) {}
 
   async get(key: string) {
-    const [r] = await this.pipeline([["GET", key]]);
-    return (r.result as string | null) ?? null;
+    const [row] = await this.sql<{ value: string }[]>`
+      SELECT value FROM kv WHERE key = ${key} AND expires_at > now()`;
+    return row?.value ?? null;
   }
 
   async set(key: string, value: string, ttlSeconds: number) {
-    await this.pipeline([["SET", key, value, "EX", ttlSeconds]]);
+    await this.sql`
+      INSERT INTO kv (key, value, expires_at) VALUES (${key}, ${value}, now() + make_interval(secs => ${ttlSeconds}))
+      ON CONFLICT (key) DO UPDATE SET value = excluded.value, expires_at = excluded.expires_at`;
+    // Expired rows are cleaned up a few at a time on writes.
+    await this.sql`DELETE FROM kv WHERE key IN (SELECT key FROM kv WHERE expires_at < now() LIMIT 50)`;
   }
 
   async incr(key: string, ttlSeconds: number) {
-    const [r] = await this.pipeline([["INCR", key], ["EXPIRE", key, ttlSeconds, "NX"]]);
-    return Number(r.result);
+    const [row] = await this.sql<{ value: string }[]>`
+      INSERT INTO kv (key, value, expires_at) VALUES (${key}, '1', now() + make_interval(secs => ${ttlSeconds}))
+      ON CONFLICT (key) DO UPDATE SET
+        value = CASE WHEN kv.expires_at > now() THEN (kv.value::int + 1)::text ELSE '1' END,
+        expires_at = CASE WHEN kv.expires_at > now() THEN kv.expires_at ELSE excluded.expires_at END
+      RETURNING value`;
+    return Number(row.value);
   }
 }

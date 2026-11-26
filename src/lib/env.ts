@@ -35,9 +35,7 @@ export function getEnv(e: NodeJS.ProcessEnv = process.env) {
       perIpDaily: num(e.RATE_LIMIT_PER_IP_DAILY, DEFAULT_LIMITS.perIpDaily),
       globalDaily: num(e.RATE_LIMIT_GLOBAL_DAILY, DEFAULT_LIMITS.globalDaily),
     },
-    upstash: e.UPSTASH_REDIS_REST_URL && e.UPSTASH_REDIS_REST_TOKEN
-      ? { url: e.UPSTASH_REDIS_REST_URL, token: e.UPSTASH_REDIS_REST_TOKEN }
-      : undefined,
+    databaseUrl: e.DATABASE_URL || undefined,
     turnstileSecret: e.TURNSTILE_SECRET_KEY || undefined,
     ipSalt: e.IP_HASH_SALT || "change-me",
   };

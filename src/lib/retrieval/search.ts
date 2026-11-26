@@ -1,10 +1,10 @@
-// Searches all laws at once. BM25 always, plus embeddings merged with RRF when there's an index.
+// Searches all laws at once. BM25 always, plus pgvector results merged with RRF when available.
 // RRF only ranks, so coverage and cosine are returned too for the relevance check.
 import type { AreaId } from "@/config/laws";
 import type { Article, LawDocument } from "@/lib/types";
 import { EXPANSIONS } from "@/lib/scope/lexicon";
 import { type Bm25Index, buildBm25, idf, scoreBm25 } from "./bm25";
-import { type Corpus, type EmbeddingIndex, getCorpus } from "./corpus";
+import { type Corpus, getCorpus } from "./corpus";
 import { normalize, tokenize } from "./text";
 
 export interface ArticleHit {
@@ -28,8 +28,8 @@ export interface SearchResult {
 export interface SearchOptions {
   context?: string;
   k?: number;
-  queryVector?: number[];
-  embeddingIndex?: EmbeddingIndex | null;
+  // chunk id -> cosine similarity, from the vector search
+  vectorScores?: Map<string, number> | null;
   corpus?: Corpus;
 }
 
@@ -65,20 +65,9 @@ export function search(question: string, opts: SearchOptions = {}): SearchResult
   const { terms, areas } = buildQueryTerms(question, opts.context);
   const lexical = scoreBm25(bm25, terms);
 
-  let cosines: Float64Array | null = null;
-  const index = opts.embeddingIndex;
-  if (index && opts.queryVector && opts.queryVector.length === index.dimensions) {
-    const q = opts.queryVector;
-    const qn = Math.sqrt(q.reduce((s, x) => s + x * x, 0)) || 1;
-    cosines = new Float64Array(corpus.chunks.length);
-    corpus.chunks.forEach((c, i) => {
-      const v = index.vectors.get(c.id);
-      if (!v) return;
-      let dot = 0;
-      for (let j = 0; j < v.length; j++) dot += v[j] * q[j];
-      cosines![i] = dot / qn;
-    });
-  }
+  // Chunks outside the vector search results get -1.
+  const scores = opts.vectorScores?.size ? opts.vectorScores : null;
+  const cosines = scores ? Float64Array.from(corpus.chunks, (c) => scores.get(c.id) ?? -1) : null;
 
   // An article scores as its best chunk.
   type Agg = { bm25: number; cosine: number; chunks: { id: string; s: number }[] };
@@ -116,7 +105,7 @@ export function search(question: string, opts: SearchOptions = {}): SearchResult
       score,
       bm25: a.bm25,
       coverage: totalWeight ? matched / totalWeight : 0,
-      cosine: cosines ? a.cosine : undefined,
+      cosine: cosines && a.cosine >= 0 ? a.cosine : undefined,
       chunkIds: a.chunks.sort((x, y) => y.s - x.s).map((c) => c.id),
     };
   });

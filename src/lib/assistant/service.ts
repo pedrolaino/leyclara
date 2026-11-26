@@ -4,7 +4,9 @@ import { createChatProvider, createEmbeddingProvider } from "@/lib/ai";
 import { type ChatProvider, QuotaExceededError } from "@/lib/ai/types";
 import { getEnv, type Env } from "@/lib/env";
 import { clientIp, hashIp, UsageLimiter } from "@/lib/guard/limits";
-import { type KV, MemoryKV, UpstashKV } from "@/lib/guard/store";
+import { type KV, MemoryKV, PostgresKV } from "@/lib/guard/store";
+import { getSql } from "@/lib/db/client";
+import { createVectorSearch, type VectorSearch } from "@/lib/retrieval/vector";
 import { verifyTurnstile } from "@/lib/guard/turnstile";
 import { getCorpus } from "@/lib/retrieval/corpus";
 import { normalize } from "@/lib/retrieval/text";
@@ -30,6 +32,7 @@ interface Services {
   kv: KV;
   chat: ChatProvider;
   limiter: UsageLimiter;
+  vectorSearch?: VectorSearch | null;
 }
 
 let services: Services | null = null;
@@ -37,12 +40,16 @@ let services: Services | null = null;
 export function getServices(): Services {
   if (services) return services;
   const env = getEnv();
-  const kv = env.upstash ? new UpstashKV(env.upstash.url, env.upstash.token) : new MemoryKV();
+  const sql = getSql(env.databaseUrl);
+  if (!sql) console.warn("[db] DATABASE_URL not set: cache and limits live in memory and search is lexical only");
+  const kv = sql ? new PostgresKV(sql) : new MemoryKV();
+  const embedder = createEmbeddingProvider(env);
   services = {
     env,
     kv,
     chat: createChatProvider(env),
     limiter: new UsageLimiter(kv, env.limits.perIpDaily, env.limits.globalDaily),
+    vectorSearch: sql && embedder ? createVectorSearch(sql, embedder) : null,
   };
   return services;
 }
@@ -65,7 +72,7 @@ export function cacheKey(question: string, context: string | undefined, chat: Ch
 }
 
 export async function handleAsk(input: AskInput, headers: Headers): Promise<AskResponse> {
-  const { env, kv, chat, limiter } = getServices();
+  const { env, kv, chat, limiter, vectorSearch } = getServices();
   const { maxQuestionChars, minQuestionChars } = env.limits;
 
   const question = typeof input.question === "string" ? input.question.replace(/\s+/g, " ").trim() : "";
@@ -107,7 +114,7 @@ export async function handleAsk(input: AskInput, headers: Headers): Promise<AskR
       question,
       {
         chat: meteredChat,
-        embedder: getEmbedder(env),
+        vectorSearch,
         maxAnswerChars: env.limits.maxAnswerChars,
         maxOutputTokens: env.limits.maxOutputTokens,
       },
@@ -124,12 +131,6 @@ export async function handleAsk(input: AskInput, headers: Headers): Promise<AskR
 
   await kv.set(key, JSON.stringify(result), CACHE_TTL).catch(() => undefined);
   return { status: 200, body: result };
-}
-
-let embedder: ReturnType<typeof createEmbeddingProvider> | undefined;
-function getEmbedder(env: Env) {
-  if (embedder === undefined) embedder = createEmbeddingProvider(env);
-  return embedder;
 }
 
 const err = (status: number, message: string): AskResponse => ({ status, body: { kind: "error", message } });

@@ -3,7 +3,7 @@ import { MockChat } from "@/lib/ai/mock";
 import type { ChatProvider, JsonRequest } from "@/lib/ai/types";
 import { answerQuestion, sanitizeFollowUps, truncateAtSentence } from "@/lib/assistant/answer";
 
-const deps = (chat: ChatProvider) => ({ chat, embeddingIndex: null, maxAnswerChars: 900, maxOutputTokens: 500 });
+const deps = (chat: ChatProvider) => ({ chat, maxAnswerChars: 900, maxOutputTokens: 500 });
 
 // Fake model: returns what we tell it and records the calls.
 function fakeChat(response: (req: JsonRequest) => unknown) {

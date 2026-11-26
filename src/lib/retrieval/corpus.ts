@@ -1,6 +1,6 @@
 // One chunk per article. Long ones are split by paragraph, but every chunk cites the same article.
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { LAWS } from "@/config/laws";
 import type { Article, LawDocument } from "@/lib/types";
@@ -11,6 +11,8 @@ export interface Chunk {
   articleId: string;
   lawId: string;
   text: string;
+  // Stored next to each vector, so a vector for old text is never used
+  hash: string;
   tokens: string[];
 }
 
@@ -18,7 +20,7 @@ export interface Corpus {
   laws: Map<string, LawDocument>;
   articles: Map<string, Article>;
   chunks: Chunk[];
-  // Used to catch an embeddings index built from older texts
+  // Part of the cache key, so cached answers expire when the laws change
   hash: string;
 }
 
@@ -55,17 +57,17 @@ export function buildChunks(laws: LawDocument[]): Chunk[] {
         const text = `${header}${groups.length > 1 ? ` (parte ${i + 1}/${groups.length})` : ""}\n${g}`;
         // The title counts twice, it says what the article is about.
         const tokens = [...tokenize(header), ...tokenize(a.title ?? ""), ...tokenize(section), ...tokenize(g)];
-        chunks.push({ id: `${a.id}#${i}`, articleId: a.id, lawId: law.id, text, tokens });
+        chunks.push({ id: `${a.id}#${i}`, articleId: a.id, lawId: law.id, text, hash: sha(text), tokens });
       });
     }
   }
   return chunks;
 }
 
+const sha = (text: string) => createHash("sha256").update(text).digest("hex").slice(0, 16);
+
 export function corpusHash(chunks: Chunk[]): string {
-  const h = createHash("sha256");
-  for (const c of chunks) h.update(c.id).update(c.text);
-  return h.digest("hex").slice(0, 16);
+  return sha(chunks.map((c) => `${c.id}:${c.hash}`).join("\n"));
 }
 
 let cached: Corpus | null = null;
@@ -81,51 +83,4 @@ export function getCorpus(): Corpus {
     hash: corpusHash(chunks),
   };
   return cached;
-}
-
-export interface EmbeddingIndexFile {
-  provider: string;
-  model: string;
-  dimensions: number;
-  corpusHash: string;
-  createdAt: string;
-  // base64 Float32, much smaller than JSON arrays
-  vectors: Record<string, string>;
-}
-
-export interface EmbeddingIndex {
-  provider: string;
-  model: string;
-  dimensions: number;
-  vectors: Map<string, Float32Array>;
-}
-
-export const embeddingIndexPath = () => path.join(dataDir(), "index", "embeddings.json");
-
-export function encodeVector(v: number[]): string {
-  return Buffer.from(new Float32Array(normalizeVector(v)).buffer).toString("base64");
-}
-
-export function normalizeVector(v: number[]): number[] {
-  const n = Math.sqrt(v.reduce((s, x) => s + x * x, 0)) || 1;
-  return v.map((x) => x / n);
-}
-
-let cachedIndex: EmbeddingIndex | null | undefined;
-
-export function getEmbeddingIndex(corpus: Corpus): EmbeddingIndex | null {
-  if (cachedIndex !== undefined) return cachedIndex;
-  const file = embeddingIndexPath();
-  if (!existsSync(file)) return (cachedIndex = null);
-  const raw = JSON.parse(readFileSync(file, "utf8")) as EmbeddingIndexFile;
-  if (raw.corpusHash !== corpus.hash) {
-    console.warn(`[index] embeddings are stale (${raw.corpusHash} != ${corpus.hash}), using lexical search only. Run npm run index:build.`);
-    return (cachedIndex = null);
-  }
-  const vectors = new Map<string, Float32Array>();
-  for (const [id, b64] of Object.entries(raw.vectors)) {
-    const buf = Buffer.from(b64, "base64");
-    vectors.set(id, new Float32Array(buf.buffer, buf.byteOffset, buf.byteLength / 4));
-  }
-  return (cachedIndex = { provider: raw.provider, model: raw.model, dimensions: raw.dimensions, vectors });
 }
