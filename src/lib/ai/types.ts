@@ -46,7 +46,13 @@ export class ProviderError extends Error {
   }
 }
 
-export async function postJson(url: string, headers: Record<string, string>, body: unknown, timeoutMs = 25_000) {
+// Responses come from outside, so every field is optional until checked.
+export async function postJson<T>(
+  url: string,
+  headers: Record<string, string>,
+  body: unknown,
+  timeoutMs = 25_000,
+): Promise<Partial<T>> {
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...headers },
@@ -58,7 +64,7 @@ export async function postJson(url: string, headers: Record<string, string>, bod
     const text = await res.text().catch(() => "");
     throw new ProviderError(`HTTP ${res.status}: ${text.slice(0, 300)}`, res.status);
   }
-  return res.json() as Promise<any>;
+  return (await res.json()) as Partial<T>;
 }
 
 // Some models wrap the JSON in ```json fences.

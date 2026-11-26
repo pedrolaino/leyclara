@@ -12,6 +12,14 @@ import {
 
 const BASE = "https://generativelanguage.googleapis.com/v1beta";
 
+interface GenerateResponse {
+  candidates: { content?: { parts?: { text?: string }[] }; finishReason?: string }[];
+}
+
+interface EmbedResponse {
+  embeddings: { values: number[] }[];
+}
+
 // Gemini wants OpenAPI-style schemas with uppercase types.
 function toGeminiSchema(s: Schema): Record<string, unknown> {
   switch (s.type) {
@@ -47,7 +55,7 @@ export class GeminiChat implements ChatProvider {
     // Thinking eats output tokens and we don't need it here.
     if (this.thinkingBudget !== undefined) generationConfig.thinkingConfig = { thinkingBudget: this.thinkingBudget };
 
-    const data = await postJson(
+    const data = await postJson<GenerateResponse>(
       `${BASE}/models/${this.model}:generateContent`,
       { "x-goog-api-key": this.apiKey },
       {
@@ -56,10 +64,8 @@ export class GeminiChat implements ChatProvider {
         generationConfig,
       },
     );
-    const text: string | undefined = data?.candidates?.[0]?.content?.parts
-      ?.map((p: { text?: string }) => p.text ?? "")
-      .join("");
-    if (!text) throw new ProviderError(`Empty response (${data?.candidates?.[0]?.finishReason ?? "no candidates"})`);
+    const text = data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("");
+    if (!text) throw new ProviderError(`Empty response (${data.candidates?.[0]?.finishReason ?? "no candidates"})`);
     return parseJsonLoose(text);
   }
 }
@@ -76,7 +82,7 @@ export class GeminiEmbeddings implements EmbeddingProvider {
     const out: number[][] = [];
     for (let i = 0; i < texts.length; i += 100) {
       const batch = texts.slice(i, i + 100);
-      const data = await postJson(
+      const data = await postJson<EmbedResponse>(
         `${BASE}/models/${this.model}:batchEmbedContents`,
         { "x-goog-api-key": this.apiKey },
         {
@@ -89,7 +95,8 @@ export class GeminiEmbeddings implements EmbeddingProvider {
         },
         60_000,
       );
-      out.push(...data.embeddings.map((e: { values: number[] }) => e.values));
+      if (!data.embeddings) throw new ProviderError("Embedding response without embeddings");
+      out.push(...data.embeddings.map((e) => e.values));
     }
     return out;
   }
