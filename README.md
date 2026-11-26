@@ -105,6 +105,10 @@ Without a key the site answers by quoting the best article and says so on the pa
 
 To refresh the laws from InfoLEG, run `npm run ingest -- --fetch`. Adding a law, such as the Constitution, means adding it to [src/config/laws.ts](src/config/laws.ts) and running the same command.
 
+## Deploying
+
+On Vercel the `vercel-build` script runs `npm run ingest` before `next build`, so every deploy creates the tables if they're missing and embeds the chunks that are new or changed. The first deploy takes about six minutes longer because of the free tier limit on embeddings. If the database or the embedding API is down, the build goes on and search uses BM25 until the next deploy.
+
 ## Tests
 
 ```bash
