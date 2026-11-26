@@ -78,6 +78,16 @@ describe.skipIf(!url)("postgres", () => {
     expect(waits).toHaveLength(1);
   });
 
+  it("stops right away when the daily quota is used up", async () => {
+    const embedder = fakeEmbedder("daily");
+    embedder.embed = async () => {
+      throw new QuotaExceededError('{"quotaId": "EmbedContentRequestsPerDayPerProjectPerModel-FreeTier"}');
+    };
+    const waits: number[] = [];
+    await expect(syncEmbeddings(sql, chunks.slice(0, 3), embedder, { wait: async (ms) => void waits.push(ms) })).rejects.toThrow(QuotaExceededError);
+    expect(waits).toHaveLength(0);
+  });
+
   it("never mixes vectors from different models", async () => {
     const other = fakeEmbedder("other");
     await syncEmbeddings(sql, chunks.slice(0, 5), other);
