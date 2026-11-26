@@ -1,7 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
+import { headers } from "next/headers";
 import { HomeLink } from "@/components/HomeLink";
-import { connection } from "next/server";
+import { THEME_SCRIPT, ThemeToggle } from "@/components/ThemeToggle";
 import { SITE_DISCLAIMER, SITE_NAME, SITE_TAGLINE } from "@/config/site";
 import "@fontsource/ibm-plex-sans/latin-400.css";
 import "@fontsource/ibm-plex-sans/latin-600.css";
@@ -20,9 +21,13 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // The CSP nonce changes on every request, so pages can't be prerendered.
-  await connection();
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
-    <html lang="es-AR">
+    // The theme script sets data-theme before React loads.
+    <html lang="es-AR" suppressHydrationWarning>
+      <head>
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body>
         <header className="site-header">
           <div className="container header-inner">
@@ -30,6 +35,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <nav aria-label="Principal">
               <Link href="/explorar">Leyes</Link>
               <Link href="/como-funciona">Cómo funciona</Link>
+              <ThemeToggle />
             </nav>
           </div>
         </header>
