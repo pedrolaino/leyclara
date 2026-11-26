@@ -1,6 +1,4 @@
-/**
- * Toda la configuración por variables de entorno, en un solo lugar. Ver .env.example.
- */
+// All env config in one place. See .env.example.
 import { DEFAULT_LIMITS } from "@/config/site";
 
 const num = (v: string | undefined, fallback: number) => {
@@ -41,7 +39,7 @@ export function getEnv(e: NodeJS.ProcessEnv = process.env) {
       ? { url: e.UPSTASH_REDIS_REST_URL, token: e.UPSTASH_REDIS_REST_TOKEN }
       : undefined,
     turnstileSecret: e.TURNSTILE_SECRET_KEY || undefined,
-    ipSalt: e.IP_HASH_SALT || "cambiar-en-produccion",
+    ipSalt: e.IP_HASH_SALT || "change-me",
   };
 }
 

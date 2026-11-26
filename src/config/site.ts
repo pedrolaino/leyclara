@@ -1,4 +1,3 @@
-/** Nombre del proyecto. Es el único lugar donde aparece en el sitio. */
 export const SITE_NAME = "Ley Clara";
 
 export const SITE_TAGLINE =
@@ -7,7 +6,7 @@ export const SITE_TAGLINE =
 export const SITE_DISCLAIMER =
   "Esto es información general sobre lo que dice la ley. No reemplaza el consejo de un abogado.";
 
-/** Límites de uso (se pueden pisar con variables de entorno, ver src/lib/env.ts). */
+// Env vars can override these, see src/lib/env.ts
 export const DEFAULT_LIMITS = {
   maxQuestionChars: 300,
   minQuestionChars: 8,

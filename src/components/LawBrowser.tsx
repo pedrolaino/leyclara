@@ -5,7 +5,6 @@ import { useMemo, useState } from "react";
 import { normalize } from "@/lib/retrieval/text";
 import type { Article } from "@/lib/types";
 
-/** Índice por títulos/capítulos + buscador por palabra dentro de una ley. */
 export function LawBrowser({ articles }: { articles: Article[] }) {
   const [query, setQuery] = useState("");
   const index = useMemo(
@@ -18,7 +17,7 @@ export function LawBrowser({ articles }: { articles: Article[] }) {
     ? articles.filter((_, i) => words.every((w) => index[i].includes(w)))
     : articles;
 
-  // Agrupar por la ubicación (título › capítulo) para el índice.
+  // Group consecutive articles by título and capítulo.
   const groups: { path: string; items: Article[] }[] = [];
   for (const a of visible) {
     const path = a.path.join(" › ") || "Disposiciones";

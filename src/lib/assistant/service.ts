@@ -1,7 +1,4 @@
-/**
- * Orquestación de una consulta, independiente de Next.js (se testea sin servidor):
- * validación → captcha → caché → límites → pipeline → caché.
- */
+// Handles one question: validation, captcha, cache, limits, pipeline. No Next.js here so it's easy to test.
 import { createHash } from "node:crypto";
 import { createChatProvider, createEmbeddingProvider } from "@/lib/ai";
 import { type ChatProvider, QuotaExceededError } from "@/lib/ai/types";
@@ -50,7 +47,6 @@ export function getServices(): Services {
   return services;
 }
 
-/** Para tests: inyectar dependencias. */
 export function setServices(s: Services | null) {
   services = s;
 }
@@ -72,7 +68,6 @@ export async function handleAsk(input: AskInput, headers: Headers): Promise<AskR
   const { env, kv, chat, limiter } = getServices();
   const { maxQuestionChars, minQuestionChars } = env.limits;
 
-  // 1. Validación
   const question = typeof input.question === "string" ? input.question.replace(/\s+/g, " ").trim() : "";
   if (!question) return err(400, MESSAGES.empty);
   if (question.length > maxQuestionChars) return err(400, MESSAGES.tooLong(maxQuestionChars));
@@ -82,11 +77,10 @@ export async function handleAsk(input: AskInput, headers: Headers): Promise<AskR
       ? input.context.replace(/\s+/g, " ").trim().slice(0, maxQuestionChars)
       : undefined;
 
-  // 2. Captcha invisible
   const ip = clientIp(headers);
   if (!(await verifyTurnstile(env.turnstileSecret, input.captchaToken, ip))) return err(403, MESSAGES.captcha);
 
-  // 3. Caché: las preguntas repetidas (como las de ejemplo) no gastan cupo.
+  // Repeated questions, like the examples, don't use quota.
   const key = cacheKey(question, context, chat);
   const hit = await kv.get(key).catch(() => null);
   if (hit) {
@@ -94,11 +88,10 @@ export async function handleAsk(input: AskInput, headers: Headers): Promise<AskR
     return { status: 200, body: { ...cached, meta: { ...cached.meta, cached: true } } };
   }
 
-  // 4. Límites
   if (!(await limiter.consumeIp(hashIp(ip, env.ipSalt)))) return { status: 429, body: { kind: "limit", message: MESSAGES.ipLimit } };
   if (await limiter.isExhausted()) return { status: 429, body: { kind: "limit", message: MESSAGES.exhausted } };
 
-  // El cupo global se descuenta solo cuando de verdad se llama al modelo.
+  // The global quota only counts real model calls.
   const meteredChat: ChatProvider = {
     name: chat.name,
     model: chat.model,
@@ -108,7 +101,6 @@ export async function handleAsk(input: AskInput, headers: Headers): Promise<AskR
     },
   };
 
-  // 5. Pipeline
   let result: AskResult;
   try {
     result = await answerQuestion(

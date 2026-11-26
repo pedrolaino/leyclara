@@ -16,7 +16,7 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
-      # Evaluación sin modelo: mide búsqueda y router de forma determinística y gratis.
+      # No model here: checks search and routing only.
       - run: npm run eval
         env:
           LLM_PROVIDER: mock

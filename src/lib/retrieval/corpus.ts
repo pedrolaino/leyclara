@@ -1,8 +1,4 @@
-/**
- * Carga de leyes parseadas y armado de "chunks" para la búsqueda.
- * Un artículo = un chunk, salvo artículos largos (definiciones, prohibiciones) que se parten
- * por párrafos. Todos los chunks de un artículo citan el mismo artículo.
- */
+// One chunk per article. Long ones are split by paragraph, but every chunk cites the same article.
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -14,7 +10,6 @@ export interface Chunk {
   id: string;
   articleId: string;
   lawId: string;
-  /** Texto con encabezado (ley, artículo, epígrafe): es lo que se embebe y lo que ve el modelo. */
   text: string;
   tokens: string[];
 }
@@ -23,7 +18,7 @@ export interface Corpus {
   laws: Map<string, LawDocument>;
   articles: Map<string, Article>;
   chunks: Chunk[];
-  /** Hash del contenido indexado: detecta un índice de embeddings desactualizado. */
+  // Used to catch an embeddings index built from older texts
   hash: string;
 }
 
@@ -58,7 +53,7 @@ export function buildChunks(laws: LawDocument[]): Chunk[] {
       if (buf) groups.push(buf);
       groups.forEach((g, i) => {
         const text = `${header}${groups.length > 1 ? ` (parte ${i + 1}/${groups.length})` : ""}\n${g}`;
-        // El epígrafe pesa doble: resume de qué trata el artículo.
+        // The title counts twice, it says what the article is about.
         const tokens = [...tokenize(header), ...tokenize(a.title ?? ""), ...tokenize(section), ...tokenize(g)];
         chunks.push({ id: `${a.id}#${i}`, articleId: a.id, lawId: law.id, text, tokens });
       });
@@ -94,7 +89,7 @@ export interface EmbeddingIndexFile {
   dimensions: number;
   corpusHash: string;
   createdAt: string;
-  /** chunkId → vector Float32 en base64 (más compacto que un array JSON). */
+  // base64 Float32, much smaller than JSON arrays
   vectors: Record<string, string>;
 }
 
@@ -118,14 +113,13 @@ export function normalizeVector(v: number[]): number[] {
 
 let cachedIndex: EmbeddingIndex | null | undefined;
 
-/** Devuelve null si no hay índice o si quedó desactualizado respecto de los textos. */
 export function getEmbeddingIndex(corpus: Corpus): EmbeddingIndex | null {
   if (cachedIndex !== undefined) return cachedIndex;
   const file = embeddingIndexPath();
   if (!existsSync(file)) return (cachedIndex = null);
   const raw = JSON.parse(readFileSync(file, "utf8")) as EmbeddingIndexFile;
   if (raw.corpusHash !== corpus.hash) {
-    console.warn(`[index] embeddings desactualizados (${raw.corpusHash} ≠ ${corpus.hash}); se usa solo búsqueda léxica. Corré npm run index:build.`);
+    console.warn(`[index] embeddings are stale (${raw.corpusHash} != ${corpus.hash}), using lexical search only. Run npm run index:build.`);
     return (cachedIndex = null);
   }
   const vectors = new Map<string, Float32Array>();

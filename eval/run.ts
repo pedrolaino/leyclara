@@ -1,17 +1,9 @@
-/**
- * Evaluación del asistente con preguntas de prueba (eval/questions.json).
- *
- *   npm run eval                       # usa el proveedor configurado en el entorno
- *   LLM_PROVIDER=mock npm run eval     # solo búsqueda + router, sin modelo (gratis, determinístico)
- *   npm run eval -- --verbose          # muestra cada pregunta
- *   npm run eval -- --set holdout      # set separado, que NO se usó para ajustar el glosario
- *
- * Mide:
- *  - Búsqueda: ¿el artículo esperado aparece en el top-1 / top-3 / top-5? (MRR)
- *  - Router: ¿cada pregunta terminó en el tipo de respuesta correcto?
- *  - Citas: en las respondidas, ¿el modelo citó un artículo esperado?
- * Escribe un reporte en eval/results/.
- */
+// Runs the test questions and writes a report to eval/results/.
+//
+//   npm run eval                     # provider from env
+//   LLM_PROVIDER=mock npm run eval   # search and routing only, no model
+//   npm run eval -- --verbose
+//   npm run eval -- --set holdout    # questions that were never used to tune the lexicon
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createChatProvider, createEmbeddingProvider } from "../src/lib/ai";
 import { answerQuestion } from "../src/lib/assistant/answer";
@@ -36,7 +28,7 @@ const chat = createChatProvider(env);
 const embedder = createEmbeddingProvider(env);
 const index = getEmbeddingIndex(getCorpus());
 const usesModel = chat.name !== "mock";
-const retrievalMode = index && embedder ? "híbrida" : "léxica";
+const retrievalMode = index && embedder ? "hybrid" : "lexical";
 
 type Row = Question & { got: AskResult; rank?: number; routeOk: boolean; citationOk?: boolean; ms: number };
 const rows: Row[] = [];
@@ -79,71 +71,70 @@ for (const q of questions) {
   if (verbose) {
     const cited = got.kind === "answer" ? got.citations.map((c) => c.id).join(",") : "";
     console.log(
-      `${routeOk ? "✓" : "✗"} ${q.id} [${got.kind}${cited ? ` ${cited}` : ""}] rank=${rank ?? "-"} ${got.meta.reason ?? ""} — ${q.question}`,
+      `${routeOk ? "✓" : "✗"} ${q.id} [${got.kind}${cited ? ` ${cited}` : ""}] rank=${rank ?? "-"} ${got.meta.reason ?? ""}: ${q.question}`,
     );
-    if (!routeOk || (rank ?? 1) > 3) console.log(`    candidatos: ${got.meta.candidates.slice(0, 4).map((c) => `${c.id}(${c.coverage})`).join(" ")}`);
+    if (!routeOk || (rank ?? 1) > 3) console.log(`    candidates: ${got.meta.candidates.slice(0, 4).map((c) => `${c.id}(${c.coverage})`).join(" ")}`);
   }
-  if (usesModel) await new Promise((r) => setTimeout(r, Number(process.env.EVAL_DELAY_MS ?? 4000))); // respetar el RPM del plan gratis
+  if (usesModel) await new Promise((r) => setTimeout(r, Number(process.env.EVAL_DELAY_MS ?? 4000))); // stay under the free tier rate limit
 }
 
-// --- Métricas
 const answerable = rows.filter((r) => r.expected.articles);
 const hitAt = (k: number) => answerable.filter((r) => r.rank !== undefined && r.rank <= k).length;
 const mrr = answerable.reduce((s, r) => s + (r.rank ? 1 / r.rank : 0), 0) / answerable.length;
 const routed = rows.filter((r) => usesModel || !r.needsModel);
 const byKind = (kind: string) => routed.filter((r) => r.expected.kind === kind);
-const pct = (a: number, b: number) => (b ? `${((100 * a) / b).toFixed(0)}% (${a}/${b})` : "—");
+const pct = (a: number, b: number) => (b ? `${((100 * a) / b).toFixed(0)}% (${a}/${b})` : "-");
 const citedRows = rows.filter((r) => r.citationOk !== undefined);
 const falseAnswers = routed.filter((r) => r.expected.kind !== "answer" && r.got.kind === "answer");
 
 const summary = [
-  `# Evaluación (${setName === "questions" ? "set principal" : `set ${setName}`}) — ${new Date().toISOString().slice(0, 10)}`,
+  `# Eval, ${setName === "questions" ? "main set" : `${setName} set`} (${new Date().toISOString().slice(0, 10)})`,
   "",
-  `- Modelo: \`${chat.name}/${chat.model}\``,
-  `- Búsqueda: ${retrievalMode}${index ? ` (embeddings ${index.provider}/${index.model}, ${index.dimensions} dims)` : ""}`,
-  `- Preguntas: ${rows.length} (${answerable.length} con artículo esperado)${usesModel ? "" : `; ${rows.length - routed.length} requieren modelo y se omiten del router`}`,
+  `- Model: \`${chat.name}/${chat.model}\``,
+  `- Search: ${retrievalMode}${index ? ` (embeddings ${index.provider}/${index.model}, ${index.dimensions} dims)` : ""}`,
+  `- Questions: ${rows.length} (${answerable.length} with an expected article)${usesModel ? "" : `; ${rows.length - routed.length} need a model and are left out of routing`}`,
   "",
-  "## Búsqueda (¿aparece el artículo esperado?)",
+  "## Search: is the expected article found?",
   "",
-  "| Métrica | Valor |",
+  "| Metric | Value |",
   "|---|---|",
   `| Top-1 | ${pct(hitAt(1), answerable.length)} |`,
   `| Top-3 | ${pct(hitAt(3), answerable.length)} |`,
   `| Top-5 | ${pct(hitAt(5), answerable.length)} |`,
   `| MRR | ${mrr.toFixed(3)} |`,
   "",
-  "## Router (¿terminó en el tipo de respuesta correcto?)",
+  "## Routing: right kind of response?",
   "",
-  "| Caso esperado | Acierto |",
+  "| Expected | Correct |",
   "|---|---|",
   ...(["answer", "off_topic", "not_covered", "not_found"] as const).map(
     (k) => `| ${k} | ${pct(byKind(k).filter((r) => r.routeOk).length, byKind(k).length)} |`,
   ),
   `| **Total** | **${pct(routed.filter((r) => r.routeOk).length, routed.length)}** |`,
   "",
-  `Respuestas indebidas (respondió algo que debía rechazar): **${falseAnswers.length}**`,
+  `Answered when it should have declined: **${falseAnswers.length}**`,
   "",
-  "## Citas",
+  "## Citations",
   "",
-  `Respuestas que citan un artículo esperado: ${pct(citedRows.filter((r) => r.citationOk).length, citedRows.length)}`,
+  `Answers citing an expected article: ${pct(citedRows.filter((r) => r.citationOk).length, citedRows.length)}`,
   "",
-  `Latencia promedio: ${Math.round(rows.reduce((s, r) => s + r.ms, 0) / rows.length)} ms`,
+  `Average latency: ${Math.round(rows.reduce((s, r) => s + r.ms, 0) / rows.length)} ms`,
   "",
-  "## Detalle",
+  "## Details",
   "",
-  "| id | pregunta | esperado | obtenido | rank | citas |",
+  "| id | question | expected | got | rank | citations |",
   "|---|---|---|---|---|---|",
   ...rows.map((r) => {
     const cites = r.got.kind === "answer" ? r.got.citations.map((c) => c.id).join(", ") : "";
     const exp = r.expected.articles ? `${r.expected.kind}: ${r.expected.articles.join(" / ")}` : r.expected.kind;
-    const skipped = !usesModel && r.needsModel ? " (omitida: requiere modelo)" : "";
-    return `| ${r.id} | ${r.question} | ${exp} | ${r.routeOk ? "✓" : "✗"} ${r.got.kind}${skipped} | ${r.rank ?? "—"} | ${cites} |`;
+    const skipped = !usesModel && r.needsModel ? " (skipped, needs a model)" : "";
+    return `| ${r.id} | ${r.question} | ${exp} | ${r.routeOk ? "✓" : "✗"} ${r.got.kind}${skipped} | ${r.rank ?? "-"} | ${cites} |`;
   }),
   "",
 ].join("\n");
 
 mkdirSync("eval/results", { recursive: true });
-const file = `eval/results/${setName === "questions" ? "" : `${setName}-`}${chat.name}-${chat.model.replace(/[^\w.-]/g, "_")}-${retrievalMode === "híbrida" ? "hybrid" : "lexical"}.md`;
+const file = `eval/results/${setName === "questions" ? "" : `${setName}-`}${chat.name}-${chat.model.replace(/[^\w.-]/g, "_")}-${retrievalMode}.md`;
 writeFileSync(file, summary);
-console.log(summary.split("## Detalle")[0]);
-console.log(`Reporte: ${file}`);
+console.log(summary.split("## Details")[0]);
+console.log(`Report: ${file}`);

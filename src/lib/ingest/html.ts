@@ -1,8 +1,4 @@
-/**
- * Conversión del HTML de InfoLEG a líneas de texto plano.
- * InfoLEG sirve HTML 4 en windows-1252 / ISO-8859-1, con párrafos (<p>) y saltos (<br>)
- * y cortes de línea "duros" dentro del código fuente que no son saltos reales.
- */
+// InfoLEG serves old HTML in windows-1252, with hard line wraps in the source.
 
 const NAMED_ENTITIES: Record<string, string> = {
   nbsp: " ", amp: "&", lt: "<", gt: ">", quot: '"', apos: "'",
@@ -24,7 +20,6 @@ export function decodeEntities(s: string): string {
   });
 }
 
-/** Decodifica los bytes respetando el charset declarado en el <meta>. */
 export function decodeHtmlBytes(bytes: Uint8Array): string {
   const head = new TextDecoder("latin1").decode(bytes.slice(0, 4096));
   const charset = /charset=["']?([\w-]+)/i.exec(head)?.[1]?.toLowerCase() ?? "windows-1252";
@@ -36,9 +31,8 @@ export function htmlToLines(html: string): string[] {
   let t = html
     .replace(/<!--[\s\S]*?-->/g, " ")
     .replace(/<(script|style|head)\b[\s\S]*?<\/\1>/gi, " ");
-  // Primero: los saltos del código fuente no significan nada.
+  // Source line breaks mean nothing, only block tags do.
   t = t.replace(/\s+/g, " ");
-  // Después: los elementos de bloque sí son saltos.
   t = t
     .replace(/<br\b[^>]*>/gi, "\n")
     .replace(/<\/?(p|div|h[1-6]|li|tr|table|center|blockquote)\b[^>]*>/gi, "\n")

@@ -1,14 +1,9 @@
-/**
- * Límites de uso pensados para un plan gratuito con cupos:
- *  - por IP y por día (la IP se guarda hasheada),
- *  - global por día para las llamadas al modelo (protege el cupo del proveedor),
- *  - "demo agotada" cuando el proveedor responde 429, hasta el día siguiente.
- * El día se corta a medianoche de Argentina.
- */
+// Daily limits per IP (stored hashed) and for model calls overall, so the free quota lasts.
+// Days reset at midnight Argentina time.
 import { createHash } from "node:crypto";
 import type { KV } from "./store";
 
-const DAY = 60 * 60 * 26; // TTL con margen: la clave ya incluye la fecha
+const DAY = 60 * 60 * 26; // keys already include the date, this is just cleanup
 
 export function todayAR(now = new Date()): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }).format(now);
@@ -29,7 +24,6 @@ export class UsageLimiter {
     private globalDaily: number,
   ) {}
 
-  /** Cuenta una pregunta de esta IP. Devuelve false si superó el límite diario. */
   async consumeIp(ipHash: string): Promise<boolean> {
     const n = await this.kv.incr(`rl:ip:${todayAR()}:${ipHash}`, DAY);
     return n <= this.perIpDaily;
@@ -39,7 +33,6 @@ export class UsageLimiter {
     return (await this.kv.get(`rl:exhausted:${todayAR()}`)) === "1";
   }
 
-  /** Cuenta una llamada al modelo. Devuelve false si se agotó el cupo global del día. */
   async consumeModelCall(): Promise<boolean> {
     if (await this.isExhausted()) return false;
     const n = await this.kv.incr(`rl:global:${todayAR()}`, DAY);

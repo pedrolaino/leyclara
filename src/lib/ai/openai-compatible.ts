@@ -1,7 +1,4 @@
-/**
- * Cualquier API compatible con OpenAI: Groq, OpenRouter, Together, Ollama (local),
- * e incluso Gemini por su endpoint de compatibilidad. Varios tienen plan gratuito.
- */
+// Any OpenAI-compatible API: Groq, OpenRouter, Ollama, or Gemini's compatibility endpoint.
 import {
   type ChatProvider,
   type EmbeddingProvider,
@@ -29,14 +26,14 @@ export class OpenAICompatibleChat implements ChatProvider {
         max_tokens: req.maxOutputTokens,
         response_format: { type: "json_object" },
         messages: [
-          // No todos los proveedores soportan json_schema: el schema va también en el prompt.
+          // Not every provider supports json_schema, so the schema goes in the prompt too.
           { role: "system", content: `${req.system}\n\nRespondé solo con un objeto JSON que cumpla este schema:\n${JSON.stringify(req.schema)}` },
           { role: "user", content: req.user },
         ],
       },
     );
     const text: string | undefined = data?.choices?.[0]?.message?.content;
-    if (!text) throw new ProviderError("Respuesta vacía");
+    if (!text) throw new ProviderError("Empty response");
     return parseJsonLoose(text);
   }
 }

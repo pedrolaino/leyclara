@@ -1,22 +1,16 @@
-/**
- * Registro de leyes y áreas. Agregar una ley nueva = agregar una entrada acá,
- * correr `npm run laws:fetch && npm run laws:parse && npm run index:build`.
- */
+// To add a law: add it here, then run laws:fetch, laws:parse and index:build.
 
 export type AreaId = "trabajo" | "consumo" | "transito";
 
 export interface LawSource {
-  /** Identificador estable, usado en ids de artículos: "lct", "ldc", "lnt". */
   id: string;
   area: AreaId;
   number: string;
   name: string;
   shortName: string;
-  /** Id de la norma en InfoLEG. */
   infolegId: number;
-  /** URL del texto actualizado (texact.htm), no del texto original. */
+  // texact.htm is the updated text, norma.htm is the original
   textUrl: string;
-  /** Página de la norma en InfoLEG, para enlazar desde el sitio. */
   pageUrl: string;
 }
 
@@ -26,7 +20,7 @@ export interface Area {
   subtitle: string;
   lawIds: string[];
   examples: string[];
-  /** Línea chica que va debajo de cada respuesta de esta área. */
+  // Small line shown under every answer in this area
   referral: string;
 }
 

@@ -28,7 +28,7 @@ export const RESPONSE_SCHEMA: Schema = {
 
 const MAX_ARTICLE_CHARS = 2500;
 
-/** Texto de un artículo para el modelo: primero los chunks que matchearon mejor, hasta un tope. */
+// Best matching chunks first, up to a size limit.
 export function articleForPrompt(hit: ArticleHit): string {
   const corpus = getCorpus();
   const byId = new Map(corpus.chunks.map((c) => [c.id, c]));

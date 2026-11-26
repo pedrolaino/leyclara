@@ -1,39 +1,39 @@
-# Evaluación (set holdout) — 2026-11-26
+# Eval, holdout set (2026-11-26)
 
-- Modelo: `mock/extractivo`
-- Búsqueda: léxica
-- Preguntas: 17 (13 con artículo esperado); 1 requieren modelo y se omiten del router
+- Model: `mock/extractive`
+- Search: lexical
+- Questions: 17 (13 with an expected article); 1 need a model and are left out of routing
 
-## Búsqueda (¿aparece el artículo esperado?)
+## Search: is the expected article found?
 
-| Métrica | Valor |
+| Metric | Value |
 |---|---|
 | Top-1 | 62% (8/13) |
 | Top-3 | 85% (11/13) |
 | Top-5 | 92% (12/13) |
 | MRR | 0.760 |
 
-## Router (¿terminó en el tipo de respuesta correcto?)
+## Routing: right kind of response?
 
-| Caso esperado | Acierto |
+| Expected | Correct |
 |---|---|
 | answer | 92% (12/13) |
 | off_topic | 100% (1/1) |
 | not_covered | 0% (0/2) |
-| not_found | — |
+| not_found | - |
 | **Total** | **81% (13/16)** |
 
-Respuestas indebidas (respondió algo que debía rechazar): **2**
+Answered when it should have declined: **2**
 
-## Citas
+## Citations
 
-Respuestas que citan un artículo esperado: 58% (7/12)
+Answers citing an expected article: 58% (7/12)
 
-Latencia promedio: 3 ms
+Average latency: 3 ms
 
-## Detalle
+## Details
 
-| id | pregunta | esperado | obtenido | rank | citas |
+| id | question | expected | got | rank | citations |
 |---|---|---|---|---|---|
 | h01 | Mi empleador me debe dos meses de sueldo, ¿puedo considerarme despedido? | answer: lct-242 / lct-246 | ✓ answer | 8 | lct-245 |
 | h02 | ¿Cuántos días de licencia me dan por el nacimiento de mi hijo? | answer: lct-158 | ✓ answer | 1 | lct-158 |
@@ -48,7 +48,7 @@ Latencia promedio: 3 ms
 | h11 | ¿Puedo usar el celular mientras manejo? | answer: lnt-48 | ✓ answer | 1 | lnt-48 |
 | h12 | ¿Qué pasa si no pago una multa de tránsito? ¿Vence? | answer: lnt-85 / lnt-89 | ✓ answer | 2 | lnt-82 |
 | h13 | ¿Hasta qué velocidad puedo ir con el auto en la ruta? | answer: lnt-51 | ✓ answer | 1 | lnt-51 |
-| h14 | ¿Me recomendás una serie para ver esta noche? | off_topic | ✓ off_topic | — |  |
-| h15 | Mi abuela falleció, ¿cómo se reparte la herencia? | not_covered | ✗ answer | — | lct-158 |
-| h16 | ¿A qué edad me puedo jubilar? | not_covered | ✗ answer | — | lnt-11 |
-| h17 | ¿Cuánto es hoy el salario mínimo vital y móvil? | not_found | ✗ answer (omitida: requiere modelo) | — | lct-117 |
+| h14 | ¿Me recomendás una serie para ver esta noche? | off_topic | ✓ off_topic | - |  |
+| h15 | Mi abuela falleció, ¿cómo se reparte la herencia? | not_covered | ✗ answer | - | lct-158 |
+| h16 | ¿A qué edad me puedo jubilar? | not_covered | ✗ answer | - | lnt-11 |
+| h17 | ¿Cuánto es hoy el salario mínimo vital y móvil? | not_found | ✗ answer (skipped, needs a model) | - | lct-117 |

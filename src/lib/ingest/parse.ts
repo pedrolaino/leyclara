@@ -1,10 +1,5 @@
-/**
- * Parser del texto actualizado de InfoLEG → estructura de la ley (títulos, capítulos, artículos).
- *
- * Es deliberadamente conservador: si una línea no se reconoce como encabezado o artículo,
- * se agrega como texto del artículo en curso. Los tests en tests/parse.test.ts cubren los
- * formatos que usan las tres leyes ("Art. 2°", "ARTICULO 8º bis:", "ARTICULO 40 bis)", etc.).
- */
+// Parses InfoLEG's updated law text into titles, chapters and articles.
+// Lines that aren't a heading or an article start are appended to the current article.
 import type { LawSource } from "@/config/laws";
 import type { AmendmentNote, Article, LawDocument } from "@/lib/types";
 import { htmlToLines } from "./html";
@@ -25,13 +20,12 @@ const FORMAL_RE = /^(Comun[ií]quese|Modif[ií]case el art[ií]culo|Der[oó]gans
 
 const stripAccents = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "");
 
-/** Separa las notas de InfoLEG ("(Artículo sustituido por ... B.O. ...)") del texto normativo. */
+// Splits InfoLEG amendment notes, like "(Artículo sustituido por ... B.O. ...)", from the text.
 export function splitNotes(line: string): { text: string; notes: string[] } {
   const notes: string[] = [];
   let text = line;
   for (let guard = 0; guard < 4; guard++) {
     const starts = [...text.matchAll(NOTE_START)].map((m) => m.index!);
-    // Buscamos de atrás hacia adelante la primera "(" que abre una nota hasta el final de la línea.
     const idx = starts.reverse().find((i) => NOTE_BODY.test(text.slice(i)));
     if (idx === undefined) break;
     notes.unshift(text.slice(idx).trim());
@@ -40,7 +34,7 @@ export function splitNotes(line: string): { text: string; notes: string[] } {
   return { text, notes };
 }
 
-/** "B.O. 6/3/2026" → "2026-03-06". Tolera errores de tipeo de InfoLEG ("30/6//1978"). */
+// "B.O. 6/3/2026" -> "2026-03-06". InfoLEG has typos like "30/6//1978".
 export function parseBoDate(note: string): string | undefined {
   const dates = [...note.matchAll(/B\.\s?O\.\s*(\d{1,2})\s*\/+\s*(\d{1,2})\s*\/+\s*(\d{2,4})/g)].map((m) => {
     let y = Number(m[3]);
@@ -50,15 +44,14 @@ export function parseBoDate(note: string): string | undefined {
   return dates.sort().at(-1);
 }
 
-/** Separa el epígrafe ("Indemnización por antigüedad o despido.") del cuerpo del artículo. */
 export function splitTitle(rest: string, hasMoreLines: boolean): { title?: string; body: string } {
   const r = rest.trim();
   if (!r || r.startsWith("(")) return { body: r };
   const seg = splitTitleBySegments(r);
   const words = r.split(/\s+/).length;
   const looksLikeSentence = /[,;]\s/.test(r) && words > 10;
-  // Caso LCT: el epígrafe ocupa toda la línea y el cuerpo arranca en la línea siguiente.
-  // Excepción: "DEFINICIONES. A los efectos de esta ley se entiende por:" (el resto es cuerpo).
+  // LCT style: the epigraph is the whole line and the body starts on the next one.
+  // But in "DEFINICIONES. A los efectos de esta ley se entiende por:" the rest is body.
   if (hasMoreLines && r.length <= 130 && words <= 16 && !looksLikeSentence) {
     const bodyIsBody = seg.title && (seg.body.endsWith(":") || isUpperCase(seg.title) !== isUpperCase(seg.body));
     if (!bodyIsBody) return { title: r.replace(/[.:]$/, ""), body: "" };
@@ -71,7 +64,7 @@ const isUpperCase = (s: string) => {
   return letters.length > 1 && letters === letters.toUpperCase();
 };
 
-/** Caso LDC/LNT: "Información. El proveedor está obligado ..." */
+// LDC/LNT style: "Información. El proveedor está obligado ..."
 function splitTitleBySegments(r: string): { title?: string; body: string } {
   const segments = r.split(/(?<=[.:])\s+/);
   const titleParts: string[] = [];
@@ -82,11 +75,10 @@ function splitTitleBySegments(r: string): { title?: string; body: string } {
     const nWords = clean.split(/\s+/).length;
     const short = nWords <= 9 && clean.length <= 70;
     if (!(short || (upper && clean.length <= 160)) || /[,;]/.test(clean)) break;
-    // "REQUISITOS PARA CIRCULAR. Para poder circular...": si el epígrafe va en mayúsculas,
-    // el primer segmento en minúsculas ya es cuerpo.
+    // Uppercase epigraph followed by normal case means the body started.
     if (firstUpper === undefined) firstUpper = upper;
     else if (firstUpper && !upper) break;
-    // "A los efectos de esta ley se entiende por:" es cuerpo, "REQUISITOS:" es epígrafe.
+    // "REQUISITOS:" is an epigraph, "se entiende por:" is body.
     if (seg.endsWith(":") && !(titleParts.length === 0 && (upper || nWords <= 3))) break;
     titleParts.push(clean);
     if (seg.endsWith(":")) break;
@@ -116,7 +108,7 @@ export function parseLaw(source: LawSource, html: string, retrievedAt: string): 
     if (!current) return;
     const { art, paragraphs } = current;
     const allNotes = art.notes.map((n) => n.text).join(" ");
-    // "Art. 192. —Ahorro." + "(Artículo derogado ...)": lo que parecía cuerpo era el epígrafe.
+    // Repealed articles keep only their epigraph, e.g. "Art. 192. —Ahorro." + a repeal note.
     const rest = current.rest;
     const onlyHeaderLine = paragraphs.length <= 1 && (paragraphs[0] ?? "") === current.restBody;
     if (onlyHeaderLine && rest && /derogad|vetad|observad/i.test(allNotes) && rest.length <= 130 && rest.split(/\s+/).length <= 16) {
@@ -153,8 +145,7 @@ export function parseLaw(source: LawSource, html: string, retrievedAt: string): 
 
     const a = ARTICLE_RE.exec(line);
     const num = a ? Number(a[1]) : NaN;
-    // Las referencias del tipo "Artículo 44 de la Ley..." dentro del texto no abren artículo:
-    // exigimos numeración no decreciente.
+    // Lines like "Artículo 44 de la Ley..." inside a body are references, not new articles.
     if (a && num >= lastNumber && num <= lastNumber + 15) {
       flush();
       lastNumber = num;
@@ -165,8 +156,7 @@ export function parseLaw(source: LawSource, html: string, retrievedAt: string): 
       if (dup) slug += `-${dup + 1}`;
       const number = suffix ? `${a[1]} ${suffix}` : a[1];
       const { text: rest, notes } = splitNotes(a[3] ?? "");
-      // ¿El cuerpo sigue en la línea siguiente? (no, si lo que sigue es otro artículo,
-      // un encabezado o solo una nota de modificación)
+      // Body on the next line, unless that line is an article, a heading or just a note.
       const next = lines[i + 1];
       const bodyFollows = !!next && !ARTICLE_RE.test(next) && !HEADING_RE.test(next) && splitNotes(next).text.length > 0;
       const split = splitTitle(rest, bodyFollows);
@@ -200,7 +190,7 @@ export function parseLaw(source: LawSource, html: string, retrievedAt: string): 
   }
   flush();
 
-  // "Nota Infoleg" no es una modificación del texto: solo cuentan sustituciones, incorporaciones, etc.
+  // "Nota Infoleg" lines aren't amendments.
   const dated = articles
     .flatMap((a) => a.notes)
     .filter((n) => n.date && /sustituid|incorporad|derogad|modificad|restituid/i.test(n.text));
@@ -226,16 +216,13 @@ function toNote(text: string): AmendmentNote {
   return { text: text.replace(/^\(|\)\.?$/g, "").trim(), date: parseBoDate(text) };
 }
 
-/** "...por art. 2º de la Ley Nº 27.802 B.O. 6/3/2026..." → "Ley Nº 27.802". */
+// "...por art. 2º de la Ley Nº 27.802 B.O. 6/3/2026..." -> "Ley Nº 27.802"
 function describeNorm(note: string): string {
   const m = /(Ley|Decreto(?: de Necesidad y Urgencia)?|DNU|Resoluci[oó]n)\s*(?:Nacional\s*)?N?[°º]?\s*([\d.]+(?:\/\d+)?)/i.exec(note);
   return m ? `${m[1]} Nº ${m[2]}` : note.slice(0, 80);
 }
 
-/**
- * Los epígrafes en MAYÚSCULAS de InfoLEG vienen sin tildes ("VELOCIDAD MAXIMA").
- * Al pasarlos a minúsculas restituimos las tildes más frecuentes para que se lean bien.
- */
+// Uppercase epigraphs come without accents ("VELOCIDAD MAXIMA"), so we add back the common ones.
 const ACCENTS: Record<string, string> = {
   transito: "tránsito", garantia: "garantía", maxima: "máxima", maximo: "máximo", minimas: "mínimas",
   minima: "mínima", limites: "límites", via: "vía", vias: "vías", publica: "pública", publico: "público",

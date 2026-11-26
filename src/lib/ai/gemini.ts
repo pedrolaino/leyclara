@@ -1,7 +1,4 @@
-/**
- * Google Gemini (API de Google AI Studio, tiene plan gratuito). REST directo, sin SDK.
- * Docs: https://ai.google.dev/api
- */
+// Gemini REST API (Google AI Studio has a free tier). No SDK.
 import {
   type ChatProvider,
   type EmbeddingKind,
@@ -15,7 +12,7 @@ import {
 
 const BASE = "https://generativelanguage.googleapis.com/v1beta";
 
-/** Gemini usa el formato de schema de OpenAPI con tipos en mayúscula. */
+// Gemini wants OpenAPI-style schemas with uppercase types.
 function toGeminiSchema(s: Schema): Record<string, unknown> {
   switch (s.type) {
     case "string":
@@ -47,7 +44,7 @@ export class GeminiChat implements ChatProvider {
       responseMimeType: "application/json",
       responseSchema: toGeminiSchema(req.schema),
     };
-    // En los modelos "thinking" el razonamiento consume tokens de salida; para este uso no hace falta.
+    // Thinking eats output tokens and we don't need it here.
     if (this.thinkingBudget !== undefined) generationConfig.thinkingConfig = { thinkingBudget: this.thinkingBudget };
 
     const data = await postJson(
@@ -62,7 +59,7 @@ export class GeminiChat implements ChatProvider {
     const text: string | undefined = data?.candidates?.[0]?.content?.parts
       ?.map((p: { text?: string }) => p.text ?? "")
       .join("");
-    if (!text) throw new ProviderError(`Respuesta vacía (${data?.candidates?.[0]?.finishReason ?? "sin candidatos"})`);
+    if (!text) throw new ProviderError(`Empty response (${data?.candidates?.[0]?.finishReason ?? "no candidates"})`);
     return parseJsonLoose(text);
   }
 }

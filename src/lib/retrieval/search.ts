@@ -1,11 +1,5 @@
-/**
- * Búsqueda híbrida sobre todas las leyes a la vez:
- *  - Léxica (BM25) con expansión de lenguaje coloquial → siempre disponible, sin costo.
- *  - Semántica (embeddings) si hay índice → se combina por Reciprocal Rank Fusion.
- *
- * Además de ordenar, devuelve señales absolutas de relevancia (cobertura léxica y similitud
- * coseno) que usa el router para decidir si hay una fuente suficiente para responder.
- */
+// Searches all laws at once. BM25 always, plus embeddings merged with RRF when there's an index.
+// RRF only ranks, so coverage and cosine are returned too for the relevance check.
 import type { AreaId } from "@/config/laws";
 import type { Article, LawDocument } from "@/lib/types";
 import { EXPANSIONS } from "@/lib/scope/lexicon";
@@ -16,20 +10,16 @@ import { normalize, tokenize } from "./text";
 export interface ArticleHit {
   article: Article;
   law: LawDocument;
-  /** Puntaje de ranking (BM25 o RRF). */
   score: number;
   bm25: number;
-  /** Fracción (0-1) del peso de la consulta que aparece en el artículo. */
+  // Share of the query weight found in the article, 0 to 1
   coverage: number;
-  /** Similitud coseno del mejor chunk, si hay embeddings. */
   cosine?: number;
-  /** Chunks del artículo que matchearon, de mejor a peor. */
   chunkIds: string[];
 }
 
 export interface SearchResult {
   hits: ArticleHit[];
-  /** Áreas sugeridas por la expansión coloquial ("me echaron" → trabajo). */
   expandedAreas: AreaId[];
   queryTerms: Map<string, number>;
   mode: "lexical" | "hybrid";
@@ -75,7 +65,6 @@ export function search(question: string, opts: SearchOptions = {}): SearchResult
   const { terms, areas } = buildQueryTerms(question, opts.context);
   const lexical = scoreBm25(bm25, terms);
 
-  // Similitud por chunk (si hay embeddings compatibles con el vector de la consulta).
   let cosines: Float64Array | null = null;
   const index = opts.embeddingIndex;
   if (index && opts.queryVector && opts.queryVector.length === index.dimensions) {
@@ -91,7 +80,7 @@ export function search(question: string, opts: SearchOptions = {}): SearchResult
     });
   }
 
-  // Agregación chunk → artículo (nos quedamos con el mejor chunk de cada artículo).
+  // An article scores as its best chunk.
   type Agg = { bm25: number; cosine: number; chunks: { id: string; s: number }[] };
   const byArticle = new Map<string, Agg>();
   corpus.chunks.forEach((c, i) => {
@@ -113,7 +102,6 @@ export function search(question: string, opts: SearchOptions = {}): SearchResult
     .sort((x, y) => y.score - x.score)
     .slice(0, k);
 
-  // Cobertura: cuánto del peso (idf × peso) de la consulta aparece en el artículo.
   const maxIdf = Math.log(1 + (bm25.docs.length + 0.5) / 0.5);
   const totalWeight = [...terms].reduce((s, [t, w]) => s + w * (bm25!.df.has(t) ? idf(bm25!, t) : maxIdf), 0);
   const articleTokens = (id: string) => new Set(corpus.chunks.filter((c) => c.articleId === id).flatMap((c) => c.tokens));
