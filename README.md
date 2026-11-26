@@ -55,27 +55,38 @@ Everything runs on free tiers. Embeddings are computed once by `npm run ingest`,
 
 ### Abuse
 
-A daily limit per IP (stored as a salted hash), a global daily cap on model calls, an invisible Cloudflare Turnstile check, a 300 character limit on questions, and a token limit on answers. If Gemini returns 429, the site shows "demo agotada por hoy" and stops calling it until the next day. Pages are served with a nonce-based Content-Security-Policy.
+A daily limit per IP (stored as a salted hash), a global daily cap on model calls, an invisible Cloudflare Turnstile check, a 300 character limit on questions, and a token limit on answers. If Gemini returns 429, the site shows "demo agotada por hoy" and stops calling it until the next day. A 503, which means the model is busy, gets one retry a second later. Pages are served with a nonce-based Content-Security-Policy.
 
 ## Evaluation
 
 ```bash
-LLM_PROVIDER=mock npm run eval                         # search and routing, no model
-npm run eval -- --set holdout --verbose                # questions never used for tuning
+npm run eval -- --verbose                   # provider and database from .env.local
+npm run eval -- --set holdout --verbose     # questions never used for tuning
+LLM_PROVIDER=mock npm run eval              # search and routing only, no model
 ```
 
 [`eval/questions.json`](eval/questions.json) has 30 questions: 20 with an expected article, 3 off topic, 4 on uncovered legal topics and 3 that are covered but have no clear answer in the law. They are worded differently from the examples on the home page. [`eval/holdout.json`](eval/holdout.json) has 17 more, written after the everyday-language mapping was tuned and never used to tune it.
 
-Current results with lexical search and the mock provider:
+Results with `gemini-3.1-flash-lite` and hybrid search (BM25 plus `gemini-embedding-001` vectors in pgvector):
 
 | | Main set | Holdout |
 |---|---|---|
-| Expected article in top 5 (what the model receives) | 95% (19/20) | 92% (12/13) |
-| Expected article first | 50% (10/20) | 62% (8/13) |
-| Right kind of response | 100% (27/27) | 81% (13/16) |
-| Answered when it should have declined | 0 | 2 |
+| Expected article in top 5 (what the model receives) | 100% (20/20) | 92% (12/13) |
+| Expected article first | 90% (18/20) | 77% (10/13) |
+| Right kind of response | 97% (29/30) | 94% (16/17) |
+| Answers that cite an expected article | 100% (20/20) | 100% (12/12) |
+| Answered when it should have declined | 1 | 0 |
 
-Three holdout questions end up in the wrong place. "¿En cuánto tiempo me tienen que dar los certificados?" is rejected as off topic because nothing in it points to work, even though the right article ranks first. Questions about inheritance and retirement trigger the uncovered-topic rules, but words like "falleció" and "edad" also look like work or traffic, so they reach the model. Without a model they get a wrong answer; with Gemini they're expected to come back as `not_found`. Results with Gemini and embeddings are still to be added.
+With BM25 alone the expected article came first for 50% of the main set and 62% of the holdout, so the vectors mostly help with ranking. Full reports, question by question, are in [`eval/results/`](eval/results/).
+
+Two questions fail:
+
+- "¿Cuánto sale exactamente la multa por estacionar mal en Rosario?" is expected to be declined. The model explained that fines are set in UF, each worth a liter of nafta especial, between 50 and 5,000 UF, and that the law sets no amount per city. That is correct, but the question asked for an exact figure, so it counts as a miss.
+- "Mi empleador me debe dos meses de sueldo, ¿puedo considerarme despedido?" (holdout) needs articles 242 and 246 of the Ley de Contrato de Trabajo. They rank 7th, outside the five articles the model sees, so the site says it found nothing.
+
+The certificates, inheritance and retirement questions that failed with BM25 alone now route correctly: the vector score lets the first one through, and Gemini declines the other two.
+
+Answers took 2 to 4 seconds on average. During the run the free tier was overloaded and some requests timed out after 25 seconds. The runner tries those questions again after a 30 second pause, and the report lists any that still fail.
 
 ## Running it locally
 

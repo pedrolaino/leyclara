@@ -53,12 +53,19 @@ export async function postJson<T>(
   body: unknown,
   timeoutMs = 25_000,
 ): Promise<Partial<T>> {
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...headers },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(timeoutMs),
-  });
+  const send = () =>
+    fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...headers },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  let res = await send();
+  // 503 means the model is busy for a moment. One more try usually works.
+  if (res.status === 503) {
+    await new Promise((r) => setTimeout(r, 1000));
+    res = await send();
+  }
   if (res.status === 429) throw new QuotaExceededError(await res.text().catch(() => undefined));
   if (!res.ok) {
     const text = await res.text().catch(() => "");

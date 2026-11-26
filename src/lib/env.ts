@@ -16,7 +16,7 @@ export function getEnv(e: NodeJS.ProcessEnv = process.env) {
     embeddingProvider,
     gemini: {
       apiKey: geminiKey,
-      model: e.GEMINI_MODEL || "gemini-2.5-flash",
+      model: e.GEMINI_MODEL || "gemini-3.1-flash-lite",
       embeddingModel: e.GEMINI_EMBEDDING_MODEL || "gemini-embedding-001",
       thinkingBudget: e.GEMINI_THINKING_BUDGET === undefined ? 0 : e.GEMINI_THINKING_BUDGET === "" ? undefined : Number(e.GEMINI_THINKING_BUDGET),
     },

@@ -1,4 +1,4 @@
-import type { EmbeddingProvider } from "@/lib/ai/types";
+import { QuotaExceededError, type EmbeddingProvider } from "@/lib/ai/types";
 import type { Chunk } from "@/lib/retrieval/corpus";
 import type { Sql } from "./client";
 
@@ -15,8 +15,32 @@ export interface SyncResult {
   removed: number;
 }
 
+interface SyncOptions {
+  wait?: (ms: number) => Promise<void>;
+}
+
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+// Free tiers limit requests per minute, so on a quota error we wait a minute and try again.
+async function embedWithRetry(provider: EmbeddingProvider, texts: string[], wait: (ms: number) => Promise<void>) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await provider.embed(texts, "document");
+    } catch (e) {
+      if (!(e instanceof QuotaExceededError) || attempt === 5) throw e;
+      console.log("  quota reached, waiting a minute…");
+      await wait(60_000);
+    }
+  }
+}
+
 // Embeds only new or changed chunks and drops rows for chunks that no longer exist.
-export async function syncEmbeddings(sql: Sql, chunks: Chunk[], provider: EmbeddingProvider): Promise<SyncResult> {
+export async function syncEmbeddings(
+  sql: Sql,
+  chunks: Chunk[],
+  provider: EmbeddingProvider,
+  { wait = sleep }: SyncOptions = {},
+): Promise<SyncResult> {
   const model = modelKey(provider);
   const stored = await sql<{ chunk_id: string; content_hash: string }[]>`
     SELECT chunk_id, content_hash FROM chunk_embeddings WHERE model = ${model}`;
@@ -25,7 +49,7 @@ export async function syncEmbeddings(sql: Sql, chunks: Chunk[], provider: Embedd
 
   for (let i = 0; i < todo.length; i += 100) {
     const batch = todo.slice(i, i + 100);
-    const vectors = await provider.embed(batch.map((c) => c.text), "document");
+    const vectors = await embedWithRetry(provider, batch.map((c) => c.text), wait);
     const rows = batch.map((c, j) => ({ chunk_id: c.id, model, content_hash: c.hash, embedding: toVector(vectors[j]) }));
     await sql`
       INSERT INTO chunk_embeddings ${sql(rows, "chunk_id", "model", "content_hash", "embedding")}
