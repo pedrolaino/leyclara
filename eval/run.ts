@@ -35,51 +35,64 @@ const retrievalMode = vectorSearch ? "hybrid" : "lexical";
 
 type Row = Question & { got: AskResult; rank?: number; routeOk: boolean; citationOk?: boolean; ms: number };
 const rows: Row[] = [];
-const failed: string[] = [];
+const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-for (const q of questions) {
-  const t0 = Date.now();
-  let got: AskResult;
-  try {
-    got = await answerQuestion(q.question, {
-      chat,
-      vectorSearch,
-      maxAnswerChars: env.limits.maxAnswerChars,
-      maxOutputTokens: env.limits.maxOutputTokens,
-    });
-  } catch (err) {
-    console.error(`✗ ${q.id}: ${(err as Error).message}`);
-    failed.push(q.id);
-    process.exitCode = 1;
-    continue;
+// Questions that fail with a provider error (timeout, busy model) get a second pass after a pause.
+let pending = questions;
+for (let pass = 1; pass <= 2 && pending.length > 0; pass++) {
+  if (pass === 2) {
+    console.log(`Retrying ${pending.length} questions in 30 s…`);
+    await pause(30_000);
   }
-  const ms = Date.now() - t0;
+  const retry: Question[] = [];
+  for (const q of pending) {
+    const t0 = Date.now();
+    let got: AskResult;
+    try {
+      got = await answerQuestion(q.question, {
+        chat,
+        vectorSearch,
+        maxAnswerChars: env.limits.maxAnswerChars,
+        maxOutputTokens: env.limits.maxOutputTokens,
+      });
+    } catch (err) {
+      console.error(`✗ ${q.id}: ${(err as Error).message}`);
+      retry.push(q);
+      continue;
+    }
+    const ms = Date.now() - t0;
 
-  let rank: number | undefined;
-  if (q.expected.articles) {
-    const vectorScores = vectorSearch ? await vectorSearch(q.question) : null;
-    const hits = search(q.question, { k: 10, vectorScores }).hits;
-    const pos = hits.findIndex((h) => q.expected.articles!.includes(h.article.id));
-    rank = pos >= 0 ? pos + 1 : undefined;
-  }
-  const routeOk =
-    got.kind === q.expected.kind &&
-    (q.expected.kind !== "not_covered" || (got.kind === "not_covered" && got.topic.length > 0));
-  const citationOk =
-    got.kind === "answer" && q.expected.articles
-      ? got.citations.some((c) => q.expected.articles!.includes(c.id))
-      : undefined;
-  rows.push({ ...q, got, rank, routeOk, citationOk, ms });
+    let rank: number | undefined;
+    if (q.expected.articles) {
+      const vectorScores = vectorSearch ? await vectorSearch(q.question) : null;
+      const hits = search(q.question, { k: 10, vectorScores }).hits;
+      const pos = hits.findIndex((h) => q.expected.articles!.includes(h.article.id));
+      rank = pos >= 0 ? pos + 1 : undefined;
+    }
+    const routeOk =
+      got.kind === q.expected.kind &&
+      (q.expected.kind !== "not_covered" || (got.kind === "not_covered" && got.topic.length > 0));
+    const citationOk =
+      got.kind === "answer" && q.expected.articles
+        ? got.citations.some((c) => q.expected.articles!.includes(c.id))
+        : undefined;
+    rows.push({ ...q, got, rank, routeOk, citationOk, ms });
 
-  if (verbose) {
-    const cited = got.kind === "answer" ? got.citations.map((c) => c.id).join(",") : "";
-    console.log(
-      `${routeOk ? "✓" : "✗"} ${q.id} [${got.kind}${cited ? ` ${cited}` : ""}] rank=${rank ?? "-"} ${got.meta.reason ?? ""}: ${q.question}`,
-    );
-    if (!routeOk || (rank ?? 1) > 3) console.log(`    candidates: ${got.meta.candidates.slice(0, 4).map((c) => `${c.id}(${c.coverage})`).join(" ")}`);
+    if (verbose) {
+      const cited = got.kind === "answer" ? got.citations.map((c) => c.id).join(",") : "";
+      console.log(
+        `${routeOk ? "✓" : "✗"} ${q.id} [${got.kind}${cited ? ` ${cited}` : ""}] rank=${rank ?? "-"} ${got.meta.reason ?? ""}: ${q.question}`,
+      );
+      if (!routeOk || (rank ?? 1) > 3) console.log(`    candidates: ${got.meta.candidates.slice(0, 4).map((c) => `${c.id}(${c.coverage})`).join(" ")}`);
+    }
+    if (usesModel) await pause(Number(process.env.EVAL_DELAY_MS ?? 4000)); // stay under the free tier rate limit
   }
-  if (usesModel) await new Promise((r) => setTimeout(r, Number(process.env.EVAL_DELAY_MS ?? 4000))); // stay under the free tier rate limit
+  pending = retry;
 }
+const failed = pending.map((q) => q.id);
+if (failed.length) process.exitCode = 1;
+const order = new Map(questions.map((q, i) => [q.id, i]));
+rows.sort((a, b) => order.get(a.id)! - order.get(b.id)!);
 
 const answerable = rows.filter((r) => r.expected.articles);
 const hitAt = (k: number) => answerable.filter((r) => r.rank !== undefined && r.rank <= k).length;
