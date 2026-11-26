@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { MockChat } from "@/lib/ai/mock";
 import { type ChatProvider, QuotaExceededError } from "@/lib/ai/types";
-import { handleAsk, MESSAGES, setServices } from "@/lib/assistant/service";
+import { cacheKey, handleAsk, MESSAGES, setServices } from "@/lib/assistant/service";
 import { getEnv } from "@/lib/env";
 import { UsageLimiter } from "@/lib/guard/limits";
 import { MemoryKV } from "@/lib/guard/store";
@@ -34,6 +34,24 @@ describe("handleAsk", () => {
       expect(again.status).toBe(200);
       if (again.body.kind === "answer") expect(again.body.meta.cached).toBe(true);
     }
+  });
+
+  it("caches only answers, a decline may come from a search that was down", async () => {
+    const declines: ChatProvider = { name: "fake", model: "x", generateJson: async () => ({ status: "not_found", answer: "", citations: [], follow_ups: [] }) };
+    const { kv } = setup(declines);
+    for (const question of ["¿Quién ganó el último mundial de fútbol?", "¿Cuántos días de vacaciones me corresponden?"]) {
+      const r = await handleAsk({ question }, headers());
+      expect(["off_topic", "not_found"]).toContain(r.body.kind);
+      expect(await kv.get(cacheKey(question, undefined, declines))).toBeNull();
+    }
+  });
+
+  it("ignores declines cached by older versions", async () => {
+    const chat = new MockChat();
+    const { kv } = setup(chat);
+    const question = "¿Cuál es la velocidad máxima en una autopista?";
+    await kv.set(cacheKey(question, undefined, chat), JSON.stringify({ kind: "not_found", message: "x", meta: {} }), 60);
+    expect((await handleAsk({ question }, headers())).body.kind).toBe("answer");
   });
 
   it("daily limit per IP", async () => {
