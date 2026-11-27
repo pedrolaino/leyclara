@@ -131,6 +131,16 @@ describe.skipIf(!url)("postgres", () => {
     expect(r.kind).toBe("answer");
   });
 
+  it("extends an entry's expiry each time it's read", async () => {
+    const kv = new PostgresKV(sql);
+    await kv.set("used", "v", 60);
+    expect(await kv.getAndExtend("used", 3600)).toBe("v");
+    const [row] = await sql<{ left: number }[]>`SELECT extract(epoch FROM expires_at - now()) AS left FROM kv WHERE key = 'used'`;
+    expect(Number(row.left)).toBeGreaterThan(3000);
+    await kv.set("old", "v", 0);
+    expect(await kv.getAndExtend("old", 3600)).toBeNull();
+  });
+
   it("stores cache entries and counters with expiry", async () => {
     const kv = new PostgresKV(sql);
     await kv.set("a", "1", 60);
