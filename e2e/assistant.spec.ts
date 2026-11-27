@@ -52,6 +52,31 @@ test("a frequent question fills in the form, and asking it gives the official ar
   expect(cspErrors).toEqual([]);
 });
 
+test("the placeholder types example cases, unless motion is reduced", async ({ page }) => {
+  await page.goto("/");
+  const box = page.getByLabel("Contá qué te pasó");
+  await expect(box).toHaveAttribute("placeholder", "Ej.: compré por internet y me arrepentí.");
+  // It deletes the first case and types the next one.
+  await expect.poll(() => box.getAttribute("placeholder"), { timeout: 8000 }).toMatch(/^Ej\.: (?!compré)/);
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.reload();
+  await page.waitForTimeout(3500);
+  await expect(box).toHaveAttribute("placeholder", "Ej.: compré por internet y me arrepentí.");
+});
+
+test("earlier questions stay below, under their own heading", async ({ page }) => {
+  await page.goto("/");
+  await ask(page, "¿Cuántos días de vacaciones me corresponden?");
+  await expect(page.getByRole("article", { name: "Respuesta", exact: true })).toHaveCount(1);
+  await expect(page.getByRole("heading", { name: "Consultas anteriores" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Volver al inicio" })).toHaveCount(0);
+
+  await ask(page, "¿Cuál es la velocidad máxima en autopista?");
+  await expect(page.getByRole("article", { name: "Respuesta", exact: true })).toHaveCount(2);
+  await expect(page.getByRole("heading", { name: "Consultas anteriores" })).toBeVisible();
+});
+
 test("the logo goes back to the start of the home page", async ({ page }) => {
   await page.goto("/");
   await ask(page, "¿Cuál es la velocidad máxima en una autopista?");

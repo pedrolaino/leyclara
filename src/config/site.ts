@@ -5,6 +5,15 @@ export const SITE_TAGLINE =
 
 export const SITE_LEAD = "Consultá sobre trabajo, compras y tránsito en Argentina.";
 
+// The form's placeholder types these one after the other, after "Ej.: ".
+export const TYPING_EXAMPLES = [
+  "compré por internet y me arrepentí.",
+  "me echaron después de cuatro años sin causa.",
+  "me retuvieron el auto en un control.",
+  "la heladera nueva vino fallada.",
+  "no me pagaron el aguinaldo.",
+];
+
 export const SITE_DISCLAIMER = "Información general. No reemplaza el consejo de un abogado.";
 
 // The sample answer on the home page. The quote comes from the parsed law, so it can't drift from the official text.

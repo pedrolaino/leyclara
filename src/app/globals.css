@@ -316,15 +316,11 @@ button:disabled {
   font-variant-numeric: tabular-nums;
 }
 
-.primary,
-.ghost {
+.primary {
   min-height: 44px;
   padding: 9px 23px;
   border-radius: 5px;
   white-space: nowrap;
-}
-
-.primary {
   border: 1px solid var(--ink);
   background: var(--ink);
   color: var(--paper);
@@ -337,16 +333,6 @@ button:disabled {
   color: var(--ink-fixed);
 }
 
-.ghost {
-  border: 1px solid var(--line-strong);
-  background: transparent;
-  color: var(--ink);
-}
-
-.ghost:hover:not(:disabled) {
-  border-color: var(--ink);
-}
-
 .turnstile:empty {
   display: none;
 }
@@ -356,7 +342,29 @@ button:disabled {
 }
 
 .turn + .turn {
-  margin-top: 24px;
+  margin-top: 20px;
+}
+
+/* Separates the latest answer from the ones before it */
+.history-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 36px 0 18px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.history-title::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--line-strong);
+}
+
+.turn:not(:first-child) .answer-sheet {
+  border-color: var(--line);
 }
 
 .sheet-tab {
