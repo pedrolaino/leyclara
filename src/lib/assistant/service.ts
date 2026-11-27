@@ -133,3 +133,28 @@ export async function handleAsk(input: AskInput, headers: Headers): Promise<AskR
 }
 
 const err = (status: number, message: string): AskResponse => ({ status, body: { kind: "error", message } });
+
+// Run on deploy so the frequent questions answer right away. Questions already cached are skipped.
+export async function warmCache(questions: string[]): Promise<{ added: number; skipped: number }> {
+  const { env, kv, chat, vectorSearch } = getServices();
+  let added = 0;
+  let skipped = 0;
+  for (const question of questions) {
+    const key = cacheKey(question, undefined, chat);
+    if (await kv.get(key)) {
+      skipped++;
+      continue;
+    }
+    const result = await answerQuestion(question, {
+      chat,
+      vectorSearch,
+      maxAnswerChars: env.limits.maxAnswerChars,
+      maxOutputTokens: env.limits.maxOutputTokens,
+    });
+    if (result.kind === "answer") {
+      await kv.set(key, JSON.stringify(result), CACHE_TTL);
+      added++;
+    }
+  }
+  return { added, skipped };
+}
