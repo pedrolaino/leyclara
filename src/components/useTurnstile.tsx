@@ -21,7 +21,7 @@ export function useTurnstile(siteKey?: string) {
   const widget = useRef<string | null>(null);
   const pending = useRef<((token: string | undefined) => void) | null>(null);
 
-  const getToken = useCallback(async (): Promise<string | undefined> => {
+  const fetchToken = useCallback(async (): Promise<string | undefined> => {
     if (!siteKey || !window.turnstile || !el.current) return undefined;
     const ts = window.turnstile;
     if (!widget.current) {
@@ -45,6 +45,24 @@ export function useTurnstile(siteKey?: string) {
     });
   }, [siteKey]);
 
+  // Getting a token takes a second or two, so it starts as soon as the visitor gets ready to ask.
+  // Tokens last 5 minutes and work once.
+  const ready = useRef<{ token: Promise<string | undefined>; at: number } | null>(null);
+
+  const prepare = useCallback(() => {
+    if (siteKey && !ready.current) ready.current = { token: fetchToken(), at: Date.now() };
+  }, [siteKey, fetchToken]);
+
+  const getToken = useCallback(async () => {
+    const prepared = ready.current;
+    ready.current = null;
+    if (prepared && Date.now() - prepared.at < 240_000) {
+      const token = await prepared.token;
+      if (token) return token;
+    }
+    return fetchToken();
+  }, [fetchToken]);
+
   const container = siteKey ? (
     <>
       <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" strategy="afterInteractive" />
@@ -52,5 +70,5 @@ export function useTurnstile(siteKey?: string) {
     </>
   ) : null;
 
-  return { getToken, container };
+  return { getToken, prepare, container };
 }

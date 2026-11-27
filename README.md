@@ -114,6 +114,8 @@ To refresh the laws from InfoLEG, run `npm run ingest -- --fetch`. Adding a law,
 
 On Vercel the `vercel-build` script runs `npm run ingest` before `next build`, so every deploy creates the tables if they're missing and embeds the chunks that are new or changed. The first deploy takes about six minutes longer because of the free tier limit on embeddings. If the database or the embedding API is down, the build goes on and search uses BM25 until the next deploy.
 
+Then `npm run warm-cache` answers the frequent questions on the home page and stores them in the cache, so the first visitor to click one doesn't wait for the model. Questions already cached are skipped.
+
 ## Tests
 
 ```bash

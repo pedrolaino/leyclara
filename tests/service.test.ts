@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { MockChat } from "@/lib/ai/mock";
 import { type ChatProvider, QuotaExceededError } from "@/lib/ai/types";
-import { cacheKey, handleAsk, MESSAGES, setServices } from "@/lib/assistant/service";
+import { cacheKey, handleAsk, MESSAGES, setServices, warmCache } from "@/lib/assistant/service";
 import { getEnv } from "@/lib/env";
 import { UsageLimiter } from "@/lib/guard/limits";
 import { MemoryKV } from "@/lib/guard/store";
@@ -52,6 +52,27 @@ describe("handleAsk", () => {
     const question = "¿Cuál es la velocidad máxima en una autopista?";
     await kv.set(cacheKey(question, undefined, chat), JSON.stringify({ kind: "not_found", message: "x", meta: {} }), 60);
     expect((await handleAsk({ question }, headers())).body.kind).toBe("answer");
+  });
+
+  it("warms the cache with the frequent questions, once", async () => {
+    let calls = 0;
+    const chat: ChatProvider = {
+      name: "fake",
+      model: "x",
+      async generateJson(req) {
+        calls++;
+        return new MockChat().generateJson(req);
+      },
+    };
+    setup(chat);
+    const questions = ["¿Cuántos días de vacaciones me corresponden?", "¿Cuál es la velocidad máxima en autopista?"];
+    expect(await warmCache(questions)).toEqual({ added: 2, skipped: 0 });
+    expect(calls).toBe(2);
+    expect(await warmCache(questions)).toEqual({ added: 0, skipped: 2 });
+    expect(calls).toBe(2);
+
+    const r = await handleAsk({ question: questions[1] }, headers());
+    expect(r.body.kind === "answer" && r.body.meta.cached).toBe(true);
   });
 
   it("daily limit per IP", async () => {

@@ -4,12 +4,14 @@ import { Briefcase, ShoppingBag, TrafficCone, type LucideIcon } from "lucide-rea
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AREAS, type AreaId } from "@/config/laws";
+import { TYPING_EXAMPLES } from "@/config/site";
 import type { ApiError, AskResult } from "@/lib/assistant/types";
 import type { LawSummary } from "@/lib/format";
 import type { HomeExample } from "@/lib/home-example";
 import { HOME_EVENT } from "./HomeLink";
 import { ExampleSheet, ResultSheet } from "./AnswerSheet";
 import { useTurnstile } from "./useTurnstile";
+import { useTypingPlaceholder } from "./useTypingPlaceholder";
 
 const AREA_ICONS: Record<AreaId, LucideIcon> = {
   trabajo: Briefcase,
@@ -39,11 +41,13 @@ export function Assistant({ laws, maxChars, turnstileSiteKey, title, lead, examp
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [focused, setFocused] = useState(false);
   const nextId = useRef(1);
   const stageRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const { getToken, container } = useTurnstile(turnstileSiteKey);
+  const { getToken, prepare, container } = useTurnstile(turnstileSiteKey);
+  const typed = useTypingPlaceholder(TYPING_EXAMPLES, !focused && input === "");
 
   const restart = useCallback(() => {
     setTurns([]);
@@ -88,13 +92,16 @@ export function Assistant({ laws, maxChars, turnstileSiteKey, title, lead, examp
       }
       setTurns((t) => t.map((turn) => (turn.id === id ? { ...turn, result } : turn)));
       setLoading(false);
+      // Ready for a follow-up
+      prepare();
     },
-    [loading, getToken, showStage],
+    [loading, getToken, prepare, showStage],
   );
 
   // The FAQ fills in the form, so the question can be edited before asking.
   const pick = (question: string) => {
     setInput(question);
+    prepare();
     inputRef.current?.focus({ preventScroll: true });
     formRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
@@ -127,8 +134,13 @@ export function Assistant({ laws, maxChars, turnstileSiteKey, title, lead, examp
                   value={input}
                   maxLength={maxChars}
                   rows={2}
-                  placeholder="Ej.: compré por internet y me arrepentí."
+                  placeholder={`Ej.: ${typed}`}
                   onChange={(e) => setInput(e.target.value)}
+                  onFocus={() => {
+                    setFocused(true);
+                    prepare();
+                  }}
+                  onBlur={() => setFocused(false)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
@@ -140,11 +152,6 @@ export function Assistant({ laws, maxChars, turnstileSiteKey, title, lead, examp
                   <span className="counter" aria-live="polite" hidden={left > COUNTER_FROM}>
                     {left === 1 ? "Queda 1 carácter" : `Quedan ${left} caracteres`}
                   </span>
-                  {started && (
-                    <button type="button" className="ghost" onClick={restart} disabled={loading}>
-                      Volver al inicio
-                    </button>
-                  )}
                   <button type="submit" className="primary" disabled={loading}>
                     {loading ? "Buscando…" : "Consultar"}
                   </button>
@@ -159,6 +166,7 @@ export function Assistant({ laws, maxChars, turnstileSiteKey, title, lead, examp
               newestFirst.map((turn, i) => (
                 <div key={turn.id} className="turn">
                   {i === 0 && <div className="sheet-tab">Tu consulta</div>}
+                  {i === 1 && <h2 className="history-title">Consultas anteriores</h2>}
                   <ResultSheet turn={turn} onAsk={ask} disabled={loading} />
                 </div>
               ))
