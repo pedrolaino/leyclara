@@ -188,13 +188,32 @@ button:disabled {
 }
 
 .brand {
-  padding: 0 var(--space-1);
-  background: linear-gradient(transparent 55%, var(--mark) 55%);
-  font-weight: var(--heading-weight);
-  font-size: var(--text-lg);
-  color: var(--color-text);
-  text-decoration: none;
-  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.logo {
+  display: block;
+}
+
+.logo-symbol {
+  display: none;
+}
+
+/* The full logo doesn't fit next to the menu on small phones */
+@media (max-width: 460px) {
+  .logo-full {
+    display: none;
+  }
+  .logo-symbol {
+    display: block;
+  }
+}
+
+:root[data-theme="dark"] .logo-light,
+:root:not([data-theme="dark"]) .logo-dark {
+  display: none;
 }
 
 .site-header nav {

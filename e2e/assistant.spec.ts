@@ -64,6 +64,18 @@ test("the theme button switches to light mode and remembers it", async ({ page }
   await expect(page.getByRole("button", { name: "Cambiar a modo oscuro" })).toBeVisible();
 });
 
+test("the header shows the logo and the site has its icons", async ({ page, request }) => {
+  await page.goto("/");
+  const logo = page.getByRole("link", { name: "Ley Clara" }).locator("img:visible");
+  await expect(logo).toHaveCount(1);
+  expect(await logo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+  await expect(page.locator('link[rel="icon"]').first()).toBeAttached();
+  await expect(page.locator('link[rel="apple-touch-icon"]')).toBeAttached();
+  const manifest = await (await request.get("/manifest.webmanifest")).json();
+  expect(manifest.name).toBe("Ley Clara");
+  for (const icon of manifest.icons) expect((await request.get(icon.src)).ok()).toBe(true);
+});
+
 test("off topic questions are declined", async ({ page }) => {
   await page.goto("/");
   await ask(page, "¿Quién ganó el último mundial de fútbol?");
