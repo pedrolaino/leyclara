@@ -17,7 +17,6 @@ export interface LawSource {
 export interface Area {
   id: AreaId;
   title: string;
-  subtitle: string;
   lawIds: string[];
   examples: string[];
   // Small line shown under every answer in this area
@@ -61,13 +60,11 @@ export const AREAS: Area[] = [
   {
     id: "trabajo",
     title: "Trabajo",
-    subtitle: "Despidos, sueldo, vacaciones, licencias",
     lawIds: ["lct"],
     examples: [
-      "Me despidieron sin causa, ¿qué me tienen que pagar?",
       "¿Cuántos días de vacaciones me corresponden?",
-      "¿Cuándo me tienen que pagar el aguinaldo?",
-      "¿Cuánto dura el período de prueba?",
+      "¿Qué me tienen que pagar si me despiden?",
+      "¿Cuándo me pagan el aguinaldo?",
     ],
     referral:
       "Para tu caso, consultá con un abogado laboralista, tu sindicato o la oficina de trabajo de tu provincia. Tu convenio colectivo puede darte más derechos que la ley.",
@@ -75,13 +72,11 @@ export const AREAS: Area[] = [
   {
     id: "consumo",
     title: "Compras",
-    subtitle: "Garantías, devoluciones, servicios, cobros",
     lawIds: ["ldc"],
     examples: [
-      "Compré una heladera y vino fallada, ¿qué puedo hacer?",
-      "Compré algo por internet y me arrepentí, ¿lo puedo devolver?",
-      "¿Cuánto dura la garantía de un producto nuevo?",
-      "Quiero dar de baja un servicio y no me dejan",
+      "¿Qué hago si un producto vino fallado?",
+      "¿Puedo devolver una compra por internet?",
+      "¿Cuánto dura la garantía?",
     ],
     referral:
       "Si querés reclamar, la oficina de Defensa del Consumidor de tu municipio o provincia recibe denuncias. También podés consultar con un abogado.",
@@ -89,13 +84,11 @@ export const AREAS: Area[] = [
   {
     id: "transito",
     title: "Tránsito",
-    subtitle: "Controles, multas, licencia, velocidad",
     lawIds: ["lnt"],
     examples: [
-      "¿Qué documentos tengo que llevar para manejar?",
+      "¿Qué documentos necesito para manejar?",
+      "¿Cuál es la velocidad máxima en autopista?",
       "¿Pueden retenerme el auto en un control?",
-      "¿Puedo manejar si tomé una cerveza?",
-      "¿Cuál es la velocidad máxima en una autopista?",
     ],
     referral:
       "Cada provincia y municipio puede tener sus propias normas de tránsito. Si te labraron un acta, consultá en el juzgado de faltas que la tramita o con un abogado.",
