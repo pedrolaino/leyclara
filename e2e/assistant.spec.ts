@@ -1,8 +1,8 @@
 import { expect, type Page, test } from "@playwright/test";
 
 const ask = async (page: Page, question: string) => {
-  await page.getByLabel("Tu pregunta").fill(question);
-  await page.getByRole("button", { name: "Preguntar" }).click();
+  await page.getByLabel("Contá qué te pasó").fill(question);
+  await page.getByRole("button", { name: "Consultar" }).click();
 };
 
 const noHorizontalScroll = async (page: Page) => {
@@ -10,58 +10,68 @@ const noHorizontalScroll = async (page: Page) => {
   expect(overflow).toBeLessThanOrEqual(0);
 };
 
-test("home shows the three areas with example questions", async ({ page }) => {
+test("home shows the example answer and the frequent questions", async ({ page }) => {
   await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(/¿Qué dice la ley sobre tu caso\?/);
+  const example = page.getByRole("article", { name: "Ejemplo de respuesta" });
+  await expect(example.getByText("Artículo 150")).toBeVisible();
+  await expect(example.locator("mark")).toHaveText("catorce (14) días corridos");
   for (const area of ["Trabajo", "Compras", "Tránsito"]) {
-    await expect(page.getByRole("heading", { name: area })).toBeVisible();
+    await expect(page.getByRole("heading", { name: area, exact: true })).toBeVisible();
   }
-  await expect(page.getByRole("button", { name: "¿Cuántos días de vacaciones me corresponden?" })).toBeVisible();
-  await expect(page.getByText("publicado en InfoLEG")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Ley 24.449" })).toHaveAttribute("href", "/explorar/lnt");
   await expect(page.getByText("No reemplaza el consejo de un abogado")).toBeVisible();
   await noHorizontalScroll(page);
 });
 
-test("an example question gets an answer with the official article", async ({ page }) => {
+test("a frequent question fills in the form, and asking it gives the official article", async ({ page }) => {
   const cspErrors: string[] = [];
   page.on("console", (m) => {
     if (m.type() === "error" && /Content Security Policy/i.test(m.text())) cspErrors.push(m.text());
   });
   await page.goto("/");
   await page.getByRole("button", { name: "¿Cuántos días de vacaciones me corresponden?" }).click();
+  await expect(page.getByLabel("Contá qué te pasó")).toHaveValue("¿Cuántos días de vacaciones me corresponden?");
+  await page.getByRole("button", { name: "Consultar" }).click();
 
-  const answer = page.getByRole("article", { name: "Respuesta" });
+  const answer = page.getByRole("article", { name: "Respuesta", exact: true });
   await expect(answer).toBeVisible();
-  await expect(answer.getByText("Art. 150", { exact: true })).toBeVisible();
+  await expect(answer.getByText("Artículo 150", { exact: true })).toBeVisible();
   await expect(answer.getByText("catorce (14) días corridos").first()).toBeVisible();
   await expect(answer.getByText(/Texto vigente según InfoLEG al/)).toBeVisible();
   await expect(answer.getByText(/abogado laboralista/)).toBeVisible();
+  await expect(page.getByRole("article", { name: "Ejemplo de respuesta" })).toHaveCount(0);
   await noHorizontalScroll(page);
 
-  // Follow-up questions start a new turn.
-  await answer.getByRole("button", { name: "¿Cuánto dura el período de prueba?" }).click();
-  await expect(page.getByRole("article", { name: "Respuesta" })).toHaveCount(2);
+  // Follow-up questions are asked right away and show on top.
+  await answer.getByRole("button", { name: "¿Qué me tienen que pagar si me despiden?" }).click();
+  await expect(page.getByRole("article", { name: "Respuesta", exact: true })).toHaveCount(2);
+  await expect(page.getByRole("article", { name: "Respuesta", exact: true }).first().getByRole("heading", { level: 2 })).toHaveText(
+    "¿Qué me tienen que pagar si me despiden?",
+  );
   expect(cspErrors).toEqual([]);
 });
 
 test("the logo goes back to the start of the home page", async ({ page }) => {
   await page.goto("/");
   await ask(page, "¿Cuál es la velocidad máxima en una autopista?");
-  await expect(page.getByRole("article", { name: "Respuesta" })).toBeVisible();
+  await expect(page.getByRole("article", { name: "Respuesta", exact: true })).toBeVisible();
   await page.getByRole("link", { name: "Ley Clara" }).click();
-  await expect(page.getByRole("heading", { name: "Trabajo" })).toBeVisible();
-  await expect(page.getByRole("article", { name: "Respuesta" })).toHaveCount(0);
+  await expect(page.getByRole("article", { name: "Ejemplo de respuesta" })).toBeVisible();
+  await expect(page.getByRole("article", { name: "Respuesta", exact: true })).toHaveCount(0);
 });
 
 test("the theme button switches to light mode and remembers it", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "dark" });
   await page.goto("/");
   const bg = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
-  expect(await bg()).not.toBe("rgb(255, 255, 255)");
-  await page.getByRole("button", { name: "Cambiar a modo claro" }).click();
-  expect(await bg()).toBe("rgb(255, 255, 255)");
+  const light = "rgb(244, 244, 242)";
+  expect(await bg()).not.toBe(light);
+  await page.getByRole("button", { name: "Activar tema claro" }).click();
+  expect(await bg()).toBe(light);
   await page.reload();
-  expect(await bg()).toBe("rgb(255, 255, 255)");
-  await expect(page.getByRole("button", { name: "Cambiar a modo oscuro" })).toBeVisible();
+  expect(await bg()).toBe(light);
+  await expect(page.getByRole("button", { name: "Activar tema oscuro" })).toBeVisible();
 });
 
 test("the header shows the logo and the site has its icons", async ({ page, request }) => {
@@ -97,18 +107,19 @@ test("off topic questions are declined", async ({ page }) => {
   await page.goto("/");
   await ask(page, "¿Quién ganó el último mundial de fútbol?");
   await expect(page.getByText("Esa pregunta no es sobre trabajo, compras ni tránsito")).toBeVisible();
-  await expect(page.getByRole("article", { name: "Respuesta" })).toHaveCount(0);
+  await expect(page.getByRole("article", { name: "Respuesta", exact: true })).toHaveCount(0);
 });
 
-test("suggestion buttons are readable in dark mode", async ({ page }) => {
+test("answers are readable in dark mode", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "dark" });
   await page.goto("/");
   await ask(page, "¿Quién ganó el último mundial de fútbol?");
-  const chip = page.locator(".chip").first();
-  await expect(chip).toBeVisible();
-  const [bg, text] = await chip.evaluate((el) => [getComputedStyle(el).backgroundColor, getComputedStyle(el).color]);
-  expect(bg).not.toBe("rgb(255, 255, 255)");
-  expect(bg).not.toBe(text);
+  const suggestion = page.locator(".answer-sheet .question-link").first();
+  await expect(suggestion).toBeVisible();
+  const sheet = await page.locator(".answer-sheet").first().evaluate((el) => getComputedStyle(el).backgroundColor);
+  const text = await suggestion.evaluate((el) => getComputedStyle(el).color);
+  expect(sheet).not.toBe("rgb(255, 255, 255)");
+  expect(text).not.toBe("rgb(26, 26, 26)");
 });
 
 test("uncovered legal topics say where they are regulated", async ({ page }) => {

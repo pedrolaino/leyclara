@@ -13,7 +13,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(getEnv().siteUrl),
-  title: { default: SITE_NAME, template: `%s · ${SITE_NAME}` },
+  title: { default: `${SITE_NAME} | Consultas sobre leyes argentinas`, template: `%s · ${SITE_NAME}` },
   description: SITE_TAGLINE,
   openGraph: { title: SITE_NAME, description: SITE_TAGLINE, siteName: SITE_NAME, locale: "es_AR", type: "website", url: "/" },
   twitter: { card: "summary_large_image", title: SITE_NAME, description: SITE_TAGLINE },
@@ -22,6 +22,10 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f4f4f2" },
+    { media: "(prefers-color-scheme: dark)", color: "#161615" },
+  ],
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -35,32 +39,43 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body>
         <header className="site-header">
-          <div className="container header-inner">
+          <div className="wrap header-layout">
+            <a className="skip-link" href="#contenido">
+              Saltar al contenido
+            </a>
             <HomeLink>
-              {/* One of these shows, depending on the theme and the screen width */}
-              <Image className="logo logo-full logo-light" src="/brand/ley-clara-claro.svg" alt={SITE_NAME} width={139} height={28} priority />
-              <Image className="logo logo-full logo-dark" src="/brand/ley-clara-oscuro.svg" alt={SITE_NAME} width={139} height={28} priority />
-              <Image className="logo logo-symbol logo-light" src="/brand/ley-clara-simbolo-claro.svg" alt={SITE_NAME} width={36} height={36} priority />
-              <Image className="logo logo-symbol logo-dark" src="/brand/ley-clara-simbolo-oscuro.svg" alt={SITE_NAME} width={36} height={36} priority />
+              {/* The theme decides which one shows */}
+              <Image className="logo-light" src="/brand/ley-clara-claro.svg" alt="" width={150} height={30} priority />
+              <Image className="logo-dark" src="/brand/ley-clara-oscuro.svg" alt="" width={150} height={30} priority />
             </HomeLink>
-            <nav aria-label="Principal">
-              <Link href="/explorar">Leyes</Link>
-              <Link href="/como-funciona">Cómo funciona</Link>
+            <nav aria-label="Navegación principal" className="site-nav">
+              <Link href="/#preguntas">Preguntas frecuentes</Link>
+              <Link href="/como-funciona" className="how-link">
+                Cómo funciona
+              </Link>
               <ThemeToggle />
             </nav>
           </div>
         </header>
-        <main className="container">{children}</main>
+        <main id="contenido" tabIndex={-1}>
+          {children}
+        </main>
         <footer className="site-footer">
-          <div className="container">
-            <p>{SITE_DISCLAIMER}</p>
-            <p className="footer-sources">
-              Fuente: textos actualizados de{" "}
-              <a href="https://servicios.infoleg.gob.ar/" target="_blank" rel="noopener noreferrer">
-                InfoLEG
-              </a>{" "}
-              (Ministerio de Justicia de la Nación).
-            </p>
+          <div className="wrap footer-layout">
+            <div>
+              <p>{SITE_DISCLAIMER}</p>
+              <p>
+                Textos actualizados de{" "}
+                <a href="https://servicios.infoleg.gob.ar/" target="_blank" rel="noopener noreferrer">
+                  InfoLEG
+                </a>
+                , del Ministerio de Justicia de la Nación.
+              </p>
+            </div>
+            <nav aria-label="Más páginas" className="footer-nav">
+              <Link href="/explorar">Las leyes</Link>
+              <Link href="/como-funciona">Cómo funciona</Link>
+            </nav>
           </div>
         </footer>
       </body>

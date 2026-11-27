@@ -7,7 +7,7 @@
 
 Ask in plain Spanish about your rights at work, as a consumer or on the road in Argentina, and get a short answer that cites the exact article of the law.
 
-![Home page with the three areas and example questions](docs/images/home.webp)
+![Home page with the question form, a sample answer and frequent questions](docs/images/home.webp)
 
 Most people start from a problem, like "me despidieron", "me vendieron algo fallado" or "me pararon en un control", and have no idea which law covers it. Ley Clara is organized around those situations, so nobody has to know. It searches the three laws it has, finds the articles that fit, answers in two or three sentences and shows the official text of each article it cites.
 
@@ -128,7 +128,7 @@ CI runs all of the above against a pgvector service, checks that the committed l
 ## Project layout
 
 ```
-src/config/        laws, areas, example questions, site name and limits
+src/config/        laws, areas, frequent questions, site name and limits
 src/lib/ingest/    InfoLEG HTML to articles, with amendments and dates
 src/lib/retrieval/ Spanish text processing, BM25, vector search, hybrid ranking
 src/lib/scope/     everyday words, area hints, uncovered topics

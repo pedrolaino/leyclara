@@ -8,7 +8,7 @@ export const HOME_EVENT = "leyclara:home";
 export function HomeLink({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   return (
-    <Link href="/" className="brand" onClick={() => pathname === "/" && window.dispatchEvent(new Event(HOME_EVENT))}>
+    <Link href="/" className="brand" aria-label="Ley Clara, inicio" onClick={() => pathname === "/" && window.dispatchEvent(new Event(HOME_EVENT))}>
       {children}
     </Link>
   );

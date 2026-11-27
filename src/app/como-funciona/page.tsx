@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "Cómo funciona" };
 export default function HowItWorks() {
   const laws = getLawSummaries();
   return (
-    <section className="prose">
+    <section className="wrap page prose">
       <h1>Cómo funciona</h1>
       <p className="lead">
         {SITE_NAME} busca la respuesta en el texto de tres leyes: la Ley de Contrato de Trabajo, la Ley de Defensa del
