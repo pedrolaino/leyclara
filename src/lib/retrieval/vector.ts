@@ -27,7 +27,7 @@ export function createVectorSearch(sql: Sql, embedder: EmbeddingProvider, corpus
       const fresh = matches.filter((m) => hashes.get(m.chunkId) === m.hash);
       return new Map(fresh.map((m) => [m.chunkId, m.cosine]));
     } catch (err) {
-      console.warn("[vectors] search failed, falling back to lexical search", err);
+      console.warn(`[vectors] search failed, using lexical search: ${String(err).split("\n")[0].slice(0, 160)}`);
       return null;
     }
   };
