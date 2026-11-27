@@ -23,3 +23,6 @@ export function vigenciaText(law: Pick<LawSummary, "retrievedAt" | "lastAmendmen
     ? `${base}. Última modificación incorporada: ${law.lastAmendment.text} (B.O. ${formatDate(law.lastAmendment.date)})`
     : base;
 }
+
+// "Art. 150" -> "Artículo 150"
+export const articleName = (label: string) => label.replace(/^Art\. /, "Artículo ");
