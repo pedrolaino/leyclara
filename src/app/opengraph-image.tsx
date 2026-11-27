@@ -12,7 +12,8 @@ const INK = "#1a1a1a";
 const MUTED = "#55555c";
 const MARK = "#ffe066";
 
-const file = (...parts: string[]) => readFile(path.join(process.cwd(), ...parts));
+// Only read while building (the image is static), so the server bundle doesn't need these files.
+const file = (...parts: string[]) => readFile(path.join(/* turbopackIgnore: true */ process.cwd(), ...parts));
 
 export default async function Image() {
   const fonts = "node_modules/@fontsource/ibm-plex-sans/files";
