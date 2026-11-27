@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { HomeLink } from "@/components/HomeLink";
@@ -31,7 +32,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <header className="site-header">
           <div className="container header-inner">
-            <HomeLink>{SITE_NAME}</HomeLink>
+            <HomeLink>
+              {/* One of these shows, depending on the theme and the screen width */}
+              <Image className="logo logo-full logo-light" src="/brand/ley-clara-claro.svg" alt={SITE_NAME} width={139} height={28} priority />
+              <Image className="logo logo-full logo-dark" src="/brand/ley-clara-oscuro.svg" alt={SITE_NAME} width={139} height={28} priority />
+              <Image className="logo logo-symbol logo-light" src="/brand/ley-clara-simbolo-claro.svg" alt={SITE_NAME} width={36} height={36} priority />
+              <Image className="logo logo-symbol logo-dark" src="/brand/ley-clara-simbolo-oscuro.svg" alt={SITE_NAME} width={36} height={36} priority />
+            </HomeLink>
             <nav aria-label="Principal">
               <Link href="/explorar">Leyes</Link>
               <Link href="/como-funciona">Cómo funciona</Link>

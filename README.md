@@ -1,4 +1,9 @@
-# Ley Clara
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="public/brand/ley-clara-oscuro.svg">
+    <img src="public/brand/ley-clara-claro.svg" alt="Ley Clara" width="240">
+  </picture>
+</h1>
 
 Ask in plain Spanish about your rights at work, as a consumer or on the road in Argentina, and get a short answer that cites the exact article of the law.
 
