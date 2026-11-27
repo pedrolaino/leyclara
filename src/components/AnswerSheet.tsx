@@ -1,34 +1,74 @@
 "use client";
 
-import { CalendarDays, ChevronRight, CircleAlert, ExternalLink, Info, SearchX } from "lucide-react";
+import { ChevronDown, CircleAlert, Info, SearchX } from "lucide-react";
 import type { ApiError, AskResult, CitedArticle, SourceInfo } from "@/lib/assistant/types";
-import { vigenciaText } from "@/lib/format";
+import { articleName, vigenciaText } from "@/lib/format";
+import type { HomeExample } from "@/lib/home-example";
 
-interface Props {
-  result: AskResult | ApiError;
-  onAsk: (question: string, context?: string) => void;
+interface Turn {
   question: string;
-  disabled?: boolean;
+  result?: AskResult | ApiError;
 }
 
-export function ResultCard({ result, onAsk, question, disabled }: Props) {
+type OnAsk = (question: string, context?: string) => void;
+
+export function ExampleSheet({ example }: { example: HomeExample }) {
+  const { answer, quote } = example;
+  return (
+    <article className="answer-sheet" aria-label="Ejemplo de respuesta">
+      <h2>{example.question}</h2>
+      <p className="answer-copy">
+        {answer.before}
+        <strong>{answer.strong}</strong>
+        {answer.after}
+      </p>
+      <details className="source" open>
+        <summary>
+          <span className="source-title">{example.article}</span>
+          <span className="source-law">{example.law}</span>
+          <ChevronDown className="chevron" aria-hidden size={17} />
+        </summary>
+        <blockquote className="quote">
+          «{quote.before}
+          <mark>{quote.mark}</mark>
+          {quote.after}».
+        </blockquote>
+        <a className="source-link" href={example.url} target="_blank" rel="noopener noreferrer">
+          Ver la ley en InfoLEG
+        </a>
+      </details>
+    </article>
+  );
+}
+
+export function ResultSheet({ turn, onAsk, disabled }: { turn: Turn; onAsk: OnAsk; disabled?: boolean }) {
+  const { question, result } = turn;
+
+  if (!result) {
+    return (
+      <article className="answer-sheet" aria-busy="true">
+        <h2>{question}</h2>
+        <p className="loading" role="status">
+          <span className="dots" aria-hidden>
+            <i />
+            <i />
+            <i />
+          </span>
+          Buscando en las leyes…
+        </p>
+      </article>
+    );
+  }
+
   switch (result.kind) {
     case "answer":
       return (
-        <article className="card answer" aria-label="Respuesta">
-          <p className="answer-text">{result.answer}</p>
-
-          <section className="citations" aria-label="Artículos citados">
-            <h3 className="section-label">
-              {result.citations.length === 1 ? "Artículo citado" : "Artículos citados"}
-            </h3>
-            {result.citations.map((c, i) => (
-              <ArticleDetails key={c.id} article={c} open={i === 0 && result.citations.length === 1} />
-            ))}
-          </section>
-
-          <Sources sources={result.sources} />
-
+        <article className="answer-sheet" aria-label="Respuesta">
+          <h2>{question}</h2>
+          <p className="answer-copy">{result.answer}</p>
+          {result.citations.map((c, i) => (
+            <ArticleDetails key={c.id} article={c} open={i === 0} />
+          ))}
           {result.followUps.length > 0 && (
             <Suggestions
               label="También podés preguntar"
@@ -37,29 +77,25 @@ export function ResultCard({ result, onAsk, question, disabled }: Props) {
               disabled={disabled}
             />
           )}
-
-          <p className="referral">{result.referral}</p>
-          <MetaNote meta={result.meta} />
+          <div className="sheet-notes">
+            <Sources sources={result.sources} />
+            <p>{result.referral}</p>
+            <MetaNote meta={result.meta} />
+          </div>
         </article>
       );
 
     case "off_topic":
       return (
-        <article className="card notice">
-          <p className="notice-title">
-            <Info aria-hidden size={18} /> Esa pregunta no es sobre trabajo, compras ni tránsito
-          </p>
+        <Notice question={question} icon={<Info aria-hidden size={18} />} title="Esa pregunta no es sobre trabajo, compras ni tránsito">
           <p>{result.message}</p>
           <Suggestions items={result.suggestions} onPick={(q) => onAsk(q)} disabled={disabled} />
-        </article>
+        </Notice>
       );
 
     case "not_covered":
       return (
-        <article className="card notice">
-          <p className="notice-title">
-            <Info aria-hidden size={18} /> Las consultas sobre {result.topic} no están cubiertas
-          </p>
+        <Notice question={question} icon={<Info aria-hidden size={18} />} title={`Las consultas sobre ${result.topic} no están cubiertas`}>
           <p>{result.message}</p>
           <dl className="orientation">
             <dt>Dónde se regula</dt>
@@ -68,69 +104,89 @@ export function ResultCard({ result, onAsk, question, disabled }: Props) {
             <dd>{result.whereToAsk}</dd>
           </dl>
           <Suggestions label="Esto sí lo puedo responder" items={result.suggestions} onPick={(q) => onAsk(q)} disabled={disabled} />
-        </article>
+        </Notice>
       );
 
     case "not_found":
       return (
-        <article className="card notice">
-          <p className="notice-title">
-            <SearchX aria-hidden size={18} /> No encontré un artículo que responda eso
-          </p>
+        <Notice question={question} icon={<SearchX aria-hidden size={18} />} title="No encontré un artículo que responda eso">
           <p>{result.message}</p>
           <Suggestions items={result.suggestions} onPick={(q) => onAsk(q)} disabled={disabled} />
-          {result.referral && <p className="referral">{result.referral}</p>}
-        </article>
+          {result.referral && <p className="sheet-notes">{result.referral}</p>}
+        </Notice>
       );
 
     case "limit":
       return (
-        <article className="card notice limit" role="status">
-          <p className="notice-title">
-            <CircleAlert aria-hidden size={18} /> Demo agotada por hoy
-          </p>
+        <Notice question={question} icon={<CircleAlert aria-hidden size={18} />} title="Demo agotada por hoy" role="status">
           <p>{result.message}</p>
-        </article>
+        </Notice>
       );
 
     case "error":
       return (
-        <article className="card notice error" role="alert">
+        <Notice question={question} icon={<CircleAlert aria-hidden size={18} />} title="No pudimos responder" role="alert" tone="error">
           <p>{result.message}</p>
-        </article>
+        </Notice>
       );
   }
 }
 
+function Notice({
+  question,
+  icon,
+  title,
+  role,
+  tone,
+  children,
+}: {
+  question: string;
+  icon: React.ReactNode;
+  title: string;
+  role?: "status" | "alert";
+  tone?: "error";
+  children: React.ReactNode;
+}) {
+  return (
+    <article className={`answer-sheet notice ${tone ?? ""}`} role={role}>
+      <h2>{question}</h2>
+      <p className="notice-title">
+        {icon} {title}
+      </p>
+      {children}
+    </article>
+  );
+}
+
 function ArticleDetails({ article, open }: { article: CitedArticle; open?: boolean }) {
   return (
-    <details className="article" open={open}>
+    <details className="source" open={open}>
       <summary>
-        <ChevronRight className="chevron" aria-hidden size={16} />
-        <span className="article-label">{article.label}</span>
-        {article.title && <span className="article-title">{article.title}</span>}
-        <span className="article-law">
-          {article.lawName} ({article.lawNumber})
-        </span>
+        <span className="source-title">{articleName(article.label)}</span>
+        <span className="source-law">Ley {article.lawNumber}</span>
+        <ChevronDown className="chevron" aria-hidden size={17} />
       </summary>
-      <div className="article-body">
-        {article.path.length > 0 && <p className="article-path">{article.path.join(" › ")}</p>}
-        <blockquote cite={article.url}>
-          {article.text.split("\n").map((p, i) => (
-            <p key={i}>{p}</p>
+      {(article.title || article.path.length > 0) && (
+        <p className="source-context">
+          {article.title && <strong>{article.title}</strong>}
+          {article.path.length > 0 && <span>{article.path.join(" › ")}</span>}
+        </p>
+      )}
+      <blockquote className="article-text" cite={article.url}>
+        {article.text.split("\n").map((p, i) => (
+          <p key={i}>{p}</p>
+        ))}
+      </blockquote>
+      {article.notes.length > 0 && (
+        <ul className="article-notes" aria-label="Modificaciones">
+          {article.notes.map((n, i) => (
+            <li key={i}>{n.text}</li>
           ))}
-        </blockquote>
-        {article.notes.length > 0 && (
-          <ul className="article-notes" aria-label="Modificaciones">
-            {article.notes.map((n, i) => (
-              <li key={i}>{n.text}</li>
-            ))}
-          </ul>
-        )}
-        <a href={article.url} target="_blank" rel="noopener noreferrer" className="source-link">
-          Ver texto completo en InfoLEG <ExternalLink aria-hidden size={14} />
-        </a>
-      </div>
+        </ul>
+      )}
+      <a href={article.url} target="_blank" rel="noopener noreferrer" className="source-link">
+        Ver la ley en InfoLEG
+      </a>
     </details>
   );
 }
@@ -140,7 +196,7 @@ function Sources({ sources }: { sources: SourceInfo[] }) {
     <ul className="sources">
       {sources.map((s) => (
         <li key={s.lawId}>
-          <CalendarDays aria-hidden size={14} /> {s.lawName}: {vigenciaText(s)}
+          {s.lawName}: {vigenciaText(s)}.
         </li>
       ))}
     </ul>
@@ -160,24 +216,21 @@ function Suggestions({
 }) {
   return (
     <div className="suggestions">
-      {label && <h3 className="section-label">{label}</h3>}
-      <div className="chips">
+      {label && <h3>{label}</h3>}
+      <ul>
         {items.map((q) => (
-          <button key={q} type="button" className="chip" onClick={() => onPick(q)} disabled={disabled}>
-            {q}
-          </button>
+          <li key={q}>
+            <button type="button" className="question-link" onClick={() => onPick(q)} disabled={disabled}>
+              {q}
+            </button>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   );
 }
 
 function MetaNote({ meta }: { meta: AskResult["meta"] }) {
   if (meta.provider !== "mock") return null;
-  return (
-    <p className="meta-note">
-      No hay un modelo de IA configurado, así que la respuesta es la cita del artículo que más coincide.
-    </p>
-  );
+  return <p>No hay un modelo de IA configurado, así que la respuesta es la cita del artículo que más coincide.</p>;
 }
-

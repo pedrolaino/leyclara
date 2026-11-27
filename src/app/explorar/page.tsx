@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Explorar leyes" };
 export default function ExplorePage() {
   const laws = getLawSummaries();
   return (
-    <section className="explore">
+    <section className="wrap page explore">
       <h1>Las leyes</h1>
       <p className="lead">Leé cada ley completa, ordenada por títulos y capítulos, o buscá una palabra.</p>
       <div className="law-list">

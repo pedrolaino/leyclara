@@ -20,7 +20,7 @@ export default async function LawPage({ params }: Params) {
   const law = loadLaws().find((l) => l.id === ley);
   if (!law) notFound();
   return (
-    <section className="explore">
+    <section className="wrap page explore">
       <p className="crumbs">
         <Link href="/explorar">
           <ChevronLeft aria-hidden size={14} /> Todas las leyes

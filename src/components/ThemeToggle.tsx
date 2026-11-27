@@ -24,8 +24,9 @@ export function ThemeToggle() {
   return (
     <button
       type="button"
-      className="theme-toggle"
-      aria-label={next === "light" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+      className="theme-button"
+      aria-label={next === "light" ? "Activar tema claro" : "Activar tema oscuro"}
+      aria-pressed={theme === "dark"}
       onClick={() => {
         document.documentElement.dataset.theme = next;
         try {
@@ -34,7 +35,7 @@ export function ThemeToggle() {
       }}
       hidden={theme === null}
     >
-      {next === "light" ? <Sun size={20} aria-hidden /> : <Moon size={20} aria-hidden />}
+      {next === "light" ? <Sun size={20} strokeWidth={1.7} aria-hidden /> : <Moon size={20} strokeWidth={1.7} aria-hidden />}
     </button>
   );
 }
