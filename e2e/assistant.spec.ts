@@ -76,6 +76,23 @@ test("the header shows the logo and the site has its icons", async ({ page, requ
   for (const icon of manifest.icons) expect((await request.get(icon.src)).ok()).toBe(true);
 });
 
+test("shared links get a preview with title, description and image", async ({ page, request }) => {
+  await page.goto("/");
+  const meta = (key: string) => page.locator(`meta[property="${key}"], meta[name="${key}"]`).first().getAttribute("content");
+  expect(await meta("og:title")).toBe("Ley Clara");
+  expect(await meta("og:description")).toBeTruthy();
+  expect(await meta("twitter:card")).toBe("summary_large_image");
+  const image = await meta("og:image");
+  expect(image).toMatch(/^https?:\/\//);
+
+  const res = await request.get(new URL(image!).pathname);
+  expect(res.headers()["content-type"]).toBe("image/png");
+  const png = await res.body();
+  // Width and height are in the PNG header. WhatsApp skips images over 600 KB.
+  expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([1200, 630]);
+  expect(png.length).toBeLessThan(300_000);
+});
+
 test("off topic questions are declined", async ({ page }) => {
   await page.goto("/");
   await ask(page, "¿Quién ganó el último mundial de fútbol?");
