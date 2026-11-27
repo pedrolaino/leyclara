@@ -2,6 +2,8 @@
 import type { Sql } from "@/lib/db/client";
 export interface KV {
   get(key: string): Promise<string | null>;
+  // Reads a live entry and pushes its expiry forward, so entries in use don't expire.
+  getAndExtend(key: string, ttlSeconds: number): Promise<string | null>;
   set(key: string, value: string, ttlSeconds: number): Promise<void>;
   incr(key: string, ttlSeconds: number): Promise<number>;
 }
@@ -23,6 +25,13 @@ export class MemoryKV implements KV {
     return this.live(key)?.value ?? null;
   }
 
+  async getAndExtend(key: string, ttlSeconds: number) {
+    const e = this.live(key);
+    if (!e) return null;
+    e.expires = Date.now() + ttlSeconds * 1000;
+    return e.value;
+  }
+
   async set(key: string, value: string, ttlSeconds: number) {
     if (this.data.size >= this.maxEntries) this.data.delete(this.data.keys().next().value!);
     this.data.set(key, { value, expires: Date.now() + ttlSeconds * 1000 });
@@ -42,6 +51,14 @@ export class PostgresKV implements KV {
   async get(key: string) {
     const [row] = await this.sql<{ value: string }[]>`
       SELECT value FROM kv WHERE key = ${key} AND expires_at > now()`;
+    return row?.value ?? null;
+  }
+
+  async getAndExtend(key: string, ttlSeconds: number) {
+    const [row] = await this.sql<{ value: string }[]>`
+      UPDATE kv SET expires_at = now() + make_interval(secs => ${ttlSeconds})
+      WHERE key = ${key} AND expires_at > now()
+      RETURNING value`;
     return row?.value ?? null;
   }
 

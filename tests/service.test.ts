@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MockChat } from "@/lib/ai/mock";
 import { type ChatProvider, QuotaExceededError } from "@/lib/ai/types";
 import { cacheKey, handleAsk, MESSAGES, setServices, warmCache } from "@/lib/assistant/service";
@@ -17,6 +17,7 @@ function setup(chat: ChatProvider = new MockChat(), limits: { perIp?: number; gl
 
 describe("handleAsk", () => {
   beforeEach(() => setup());
+  afterEach(() => vi.useRealTimers());
 
   it("checks min and max length", async () => {
     expect((await handleAsk({ question: "" }, headers())).status).toBe(400);
@@ -73,6 +74,22 @@ describe("handleAsk", () => {
 
     const r = await handleAsk({ question: questions[1] }, headers());
     expect(r.body.kind === "answer" && r.body.meta.cached).toBe(true);
+  });
+
+  it("answers that keep being asked don't expire", async () => {
+    vi.useFakeTimers();
+    const question = "¿Cuál es la velocidad máxima en autopista?";
+    await handleAsk({ question }, headers());
+    for (let day = 0; day < 4; day++) {
+      vi.advanceTimersByTime(60 * 24 * 3600 * 1000);
+      const r = await handleAsk({ question }, headers());
+      expect(r.body.kind === "answer" && r.body.meta.cached).toBe(true);
+    }
+  });
+
+  it("a different prompt gives a different cache key", () => {
+    const chat = new MockChat();
+    expect(cacheKey("hola qué tal", undefined, chat, "prompt A")).not.toBe(cacheKey("hola qué tal", undefined, chat, "prompt B"));
   });
 
   it("daily limit per IP", async () => {

@@ -50,7 +50,7 @@ A legal answer that sounds right and is wrong can hurt someone, so the site woul
 The law text ships with the app as JSON produced by the parser, so pages and BM25 don't depend on the database. Postgres holds what has to be shared or computed once:
 
 - `chunk_embeddings`: one vector per chunk and embedding model, plus a hash of the chunk text. Search filters by model and ignores vectors whose hash doesn't match the current text, so vectors from two models or from an old version of a law are never compared.
-- `kv`: the answer cache and the rate limit counters, shared by every serverless instance.
+- `kv`: the answer cache and the rate limit counters, shared by every serverless instance. An answer stays cached for 90 days after the last time someone asked for it, so frequent questions never expire. The cache key includes the law text, the model and the prompt, so changing any of them gives fresh answers.
 
 The same code runs against a local Postgres in Docker and against Neon in production. Only `DATABASE_URL` changes. Without it the app still works, with lexical search and limits kept in memory.
 

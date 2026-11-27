@@ -11,9 +11,14 @@ import { verifyTurnstile } from "@/lib/guard/turnstile";
 import { getCorpus } from "@/lib/retrieval/corpus";
 import { normalize } from "@/lib/retrieval/text";
 import { answerQuestion } from "./answer";
+import { RESPONSE_SCHEMA, SYSTEM_PROMPT } from "./prompt";
 import type { ApiError, AskResult } from "./types";
 
-const CACHE_TTL = 60 * 60 * 24 * 7;
+// Every hit pushes this forward: answers people keep asking stay, one-offs go after 90 days.
+const CACHE_TTL = 60 * 60 * 24 * 90;
+
+// Changing the instructions to the model makes the old answers stale.
+const PROMPT = SYSTEM_PROMPT + JSON.stringify(RESPONSE_SCHEMA);
 
 export const MESSAGES = {
   empty: "Escribí tu pregunta.",
@@ -66,8 +71,8 @@ export interface AskInput {
 
 export type AskResponse = { status: number; body: AskResult | ApiError };
 
-export function cacheKey(question: string, context: string | undefined, chat: ChatProvider): string {
-  const raw = [normalize(question), normalize(context ?? ""), chat.name, chat.model, getCorpus().hash].join("|");
+export function cacheKey(question: string, context: string | undefined, chat: ChatProvider, prompt = PROMPT): string {
+  const raw = [normalize(question), normalize(context ?? ""), chat.name, chat.model, getCorpus().hash, prompt].join("|");
   return `cache:${createHash("sha256").update(raw).digest("hex").slice(0, 32)}`;
 }
 
@@ -89,7 +94,7 @@ export async function handleAsk(input: AskInput, headers: Headers): Promise<AskR
 
   // Repeated questions, like the examples, don't use quota.
   const key = cacheKey(question, context, chat);
-  const hit = await kv.get(key).catch(() => null);
+  const hit = await kv.getAndExtend(key, CACHE_TTL).catch(() => null);
   const cached = hit ? (JSON.parse(hit) as AskResult) : null;
   if (cached?.kind === "answer") return { status: 200, body: { ...cached, meta: { ...cached.meta, cached: true } } };
 
@@ -141,7 +146,7 @@ export async function warmCache(questions: string[]): Promise<{ added: number; s
   let skipped = 0;
   for (const question of questions) {
     const key = cacheKey(question, undefined, chat);
-    if (await kv.get(key)) {
+    if (await kv.getAndExtend(key, CACHE_TTL)) {
       skipped++;
       continue;
     }
