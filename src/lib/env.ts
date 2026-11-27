@@ -35,6 +35,8 @@ export function getEnv(e: NodeJS.ProcessEnv = process.env) {
       perIpDaily: num(e.RATE_LIMIT_PER_IP_DAILY, DEFAULT_LIMITS.perIpDaily),
       globalDaily: num(e.RATE_LIMIT_GLOBAL_DAILY, DEFAULT_LIMITS.globalDaily),
     },
+    // Shared links need absolute URLs. Vercel sets the production domain.
+    siteUrl: e.SITE_URL || (e.VERCEL_PROJECT_PRODUCTION_URL ? `https://${e.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3000"),
     databaseUrl: e.DATABASE_URL || undefined,
     turnstileSecret: e.TURNSTILE_SECRET_KEY || undefined,
     ipSalt: e.IP_HASH_SALT || "change-me",

@@ -5,14 +5,18 @@ import { headers } from "next/headers";
 import { HomeLink } from "@/components/HomeLink";
 import { THEME_SCRIPT, ThemeToggle } from "@/components/ThemeToggle";
 import { SITE_DISCLAIMER, SITE_NAME, SITE_TAGLINE } from "@/config/site";
+import { getEnv } from "@/lib/env";
 import "@fontsource/ibm-plex-sans/latin-400.css";
 import "@fontsource/ibm-plex-sans/latin-600.css";
 import "@fontsource/ibm-plex-serif/latin-400.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(getEnv().siteUrl),
   title: { default: SITE_NAME, template: `%s · ${SITE_NAME}` },
   description: SITE_TAGLINE,
+  openGraph: { title: SITE_NAME, description: SITE_TAGLINE, siteName: SITE_NAME, locale: "es_AR", type: "website", url: "/" },
+  twitter: { card: "summary_large_image", title: SITE_NAME, description: SITE_TAGLINE },
 };
 
 export const viewport: Viewport = {
